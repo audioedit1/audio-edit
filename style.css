@@ -22,3 +22,31 @@ header {
   font-size: 24px;
   color: #666;
 }
+.upload-section {
+  width: 80%;
+  margin: 40px auto;
+  padding: 20px;
+  border-top: 1px solid #222;
+}
+
+.upload-section h2 {
+  margin-bottom: 10px;
+}
+
+#fileList {
+  list-style: none;
+  padding: 0;
+}
+
+#fileList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid #222;
+  font-size: 14px;
+}
+
+.download-btn {
+  cursor: pointer;
+  color: #4ea1ff;
+}
