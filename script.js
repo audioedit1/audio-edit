@@ -9,6 +9,7 @@ let selectedLibraryItem = null;
 const trackBuffers = [null, null, null];
 const trackSources = [null, null, null];
 
+// ---------- FILE UPLOAD ----------
 fileInput.addEventListener("change", async () => {
   if (!audioContext) {
     audioContext = new AudioContext();
@@ -21,13 +22,14 @@ fileInput.addEventListener("change", async () => {
   fileInput.value = "";
 });
 
+// ---------- LIBRARY ----------
 async function addToLibrary(file) {
   const arrayBuffer = await file.arrayBuffer();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
   const li = document.createElement("li");
-  li.textContent = file.name + " ";
   li.style.cursor = "pointer";
+  li.textContent = file.name + " ";
 
   let previewSource = null;
 
@@ -37,10 +39,11 @@ async function addToLibrary(file) {
   const stopBtn = document.createElement("button");
   stopBtn.textContent = "Stop";
 
+  // 🔹 PLAY (LIBRARY)
   playBtn.onclick = async (e) => {
     e.stopPropagation();
 
-    if (audioContext.state === "suspended") {
+    if (audioContext.state !== "running") {
       await audioContext.resume();
     }
 
@@ -52,18 +55,26 @@ async function addToLibrary(file) {
     previewSource.start();
   };
 
+  // 🔹 STOP (LIBRARY)
   stopBtn.onclick = (e) => {
     e.stopPropagation();
-    if (previewSource) previewSource.stop();
+    if (previewSource) {
+      previewSource.stop();
+      previewSource = null;
+    }
   };
 
+  // 🔹 SELECT LIBRARY ITEM
   li.onclick = () => {
     document
       .querySelectorAll("#fileList li")
       .forEach(el => el.classList.remove("selected"));
 
     li.classList.add("selected");
-    selectedLibraryItem = { name: file.name, buffer: audioBuffer };
+    selectedLibraryItem = {
+      name: file.name,
+      buffer: audioBuffer
+    };
   };
 
   li.appendChild(playBtn);
@@ -71,13 +82,13 @@ async function addToLibrary(file) {
   fileList.appendChild(li);
 }
 
-// Track assignment + playback
+// ---------- TRACKS ----------
 tracks.forEach((track, index) => {
   const label = track.querySelector(".track-label");
   const playBtn = track.querySelector(".track-play");
   const stopBtn = track.querySelector(".track-stop");
 
-  // Assign buffer
+  // 🔹 ASSIGN TO TRACK
   track.onclick = (e) => {
     if (e.target.tagName === "BUTTON") return;
     if (!selectedLibraryItem) return;
@@ -86,35 +97,32 @@ tracks.forEach((track, index) => {
     label.textContent = `Track ${index + 1}: ${selectedLibraryItem.name}`;
   };
 
+  // 🔹 PLAY TRACK
   playBtn.onclick = async () => {
-  if (!trackBuffers[index]) return;
+    if (!trackBuffers[index]) return;
 
-  // 🔴 GUARANTEE context exists
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
+    if (!audioContext) {
+      audioContext = new AudioContext();
+    }
 
-  // 🔴 GUARANTEE context is running
-  if (audioContext.state !== "running") {
-    await audioContext.resume();
-  }
+    if (audioContext.state !== "running") {
+      await audioContext.resume();
+    }
 
-  // Stop previous source if any
-  if (trackSources[index]) {
-    trackSources[index].stop();
-    trackSources[index] = null;
-  }
+    if (trackSources[index]) {
+      trackSources[index].stop();
+      trackSources[index] = null;
+    }
 
-  // 🔴 CREATE FRESH SOURCE (required by Web Audio spec)
-  const source = audioContext.createBufferSource();
-  source.buffer = trackBuffers[index];
-  source.connect(audioContext.destination);
-  source.start(0);
+    const source = audioContext.createBufferSource();
+    source.buffer = trackBuffers[index];
+    source.connect(audioContext.destination);
+    source.start();
 
-  trackSources[index] = source;
-};
+    trackSources[index] = source;
+  };
 
-
+  // 🔹 STOP TRACK
   stopBtn.onclick = () => {
     if (trackSources[index]) {
       trackSources[index].stop();
