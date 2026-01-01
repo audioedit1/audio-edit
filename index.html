@@ -8,45 +8,107 @@
 <body>
 
   <header>
-    <h1>Audio Edit</h1> 
+    <h1>Audio Edit</h1>
     <p>Upload, edit, and prepare sounds in your browser.</p>
   </header>
 
+  <!-- MASTER SECTION -->
+  <section class="master">
+    <h2>Master</h2>
+    <label>
+      Volume
+      <input
+        type="range"
+        id="masterGain"
+        min="0"
+        max="1"
+        step="0.01"
+        value="0.9"
+      />
+    </label>
+  </section>
+
+  <!-- EDITOR / TRACKS -->
   <main>
-    <div class="editor">
-  <h2>Editor</h2>
+    <section class="editor">
+      <h2>Editor</h2>
 
-<div class="track" data-track="0">
-  <span class="track-label">Track 1 (empty)</span>
-  <button class="track-play">Play</button>
-  <button class="track-stop">Stop</button>
-  <input class="track-gain" type="range" min="0" max="1" step="0.01" value="1">
-</div>
+      <!-- TRACK 1 -->
+      <div class="track" data-track="0">
+        <span class="track-label">Track 1 (empty)</span>
 
-<div class="track" data-track="1">
-  <span class="track-label">Track 2 (empty)</span>
-  <button class="track-play">Play</button>
-  <button class="track-stop">Stop</button>
-  <input class="track-gain" type="range" min="0" max="1" step="0.01" value="1">
-</div>
+        <button class="track-mute">Mute</button>
+        <button class="track-solo">Solo</button>
 
-<div class="track" data-track="2">
-  <span class="track-label">Track 3 (empty)</span>
-  <button class="track-play">Play</button>
-  <button class="track-stop">Stop</button>
-  <input class="track-gain" type="range" min="0" max="1" step="0.01" value="1">
-</div>
+        <input
+          type="range"
+          class="track-gain"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
 
+        <button class="track-play">Play</button>
+        <button class="track-stop">Stop</button>
+      </div>
+
+      <!-- TRACK 2 -->
+      <div class="track" data-track="1">
+        <span class="track-label">Track 2 (empty)</span>
+
+        <button class="track-mute">Mute</button>
+        <button class="track-solo">Solo</button>
+
+        <input
+          type="range"
+          class="track-gain"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
+
+        <button class="track-play">Play</button>
+        <button class="track-stop">Stop</button>
+      </div>
+
+      <!-- TRACK 3 -->
+      <div class="track" data-track="2">
+        <span class="track-label">Track 3 (empty)</span>
+
+        <button class="track-mute">Mute</button>
+        <button class="track-solo">Solo</button>
+
+        <input
+          type="range"
+          class="track-gain"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
+
+        <button class="track-play">Play</button>
+        <button class="track-stop">Stop</button>
+      </div>
+
+    </section>
   </main>
-  
-<section class="upload-section">
-  <h2>Sound Library</h2>
 
- <input type="file" id="fileInput" accept="audio/*" multiple />
+  <!-- SOUND LIBRARY -->
+  <section class="upload-section">
+    <h2>Sound Library</h2>
 
-  <ul id="fileList"></ul>
-</section>
+    <input
+      type="file"
+      id="fileInput"
+      accept="audio/*"
+      multiple
+    />
 
+    <ul id="fileList"></ul>
+  </section>
 
   <script src="script.js"></script>
 </body>
