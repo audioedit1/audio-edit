@@ -56,3 +56,21 @@ header {
   cursor: pointer;
   color: #4ea1ff;
 }
+
+.editor {
+  width: 80%;
+  margin: 40px auto;
+}
+
+.track {
+  border: 1px solid #333;
+  padding: 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  color: #777;
+}
+
+.track.filled {
+  color: #fff;
+  border-color: #4ea1ff;
+}
