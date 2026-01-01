@@ -1,7 +1,9 @@
 const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
+const tracks = document.querySelectorAll(".track");
 
 let audioContext = null;
+const libraryBuffers = [];
 
 fileInput.addEventListener("change", async () => {
   if (!audioContext) {
@@ -9,21 +11,23 @@ fileInput.addEventListener("change", async () => {
   }
 
   for (const file of fileInput.files) {
-    await addFileToLibrary(file);
+    await addToLibrary(file);
+    assignToNextTrack(file.name);
   }
 
-  // allow re-uploading the same file again later
   fileInput.value = "";
 });
 
-async function addFileToLibrary(file) {
+async function addToLibrary(file) {
   const arrayBuffer = await file.arrayBuffer();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+  libraryBuffers.push({ name: file.name, buffer: audioBuffer });
 
   const li = document.createElement("li");
   li.textContent = file.name + " ";
 
-  let sourceNode = null;
+  let previewSource = null;
 
   const playBtn = document.createElement("button");
   playBtn.textContent = "Play";
@@ -36,24 +40,33 @@ async function addFileToLibrary(file) {
       await audioContext.resume();
     }
 
-    if (sourceNode) {
-      sourceNode.stop();
+    if (previewSource) {
+      previewSource.stop();
     }
 
-    sourceNode = audioContext.createBufferSource();
-    sourceNode.buffer = audioBuffer;
-    sourceNode.connect(audioContext.destination);
-    sourceNode.start();
+    previewSource = audioContext.createBufferSource();
+    previewSource.buffer = audioBuffer;
+    previewSource.connect(audioContext.destination);
+    previewSource.start();
   };
 
   stopBtn.onclick = () => {
-    if (sourceNode) {
-      sourceNode.stop();
-      sourceNode = null;
+    if (previewSource) {
+      previewSource.stop();
+      previewSource = null;
     }
   };
 
   li.appendChild(playBtn);
   li.appendChild(stopBtn);
   fileList.appendChild(li);
+}
+
+let trackIndex = 0;
+
+function assignToNextTrack(filename) {
+  if (trackIndex >= tracks.length) return;
+
+  tracks[trackIndex].textContent = `Track ${trackIndex + 1}: ${filename}`;
+  trackIndex++;
 }
