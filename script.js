@@ -3,17 +3,26 @@ const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
 
 let audioContext = null;
+let masterGain = null;
 let selectedLibraryItem = null;
 
-// Track state
 const trackBuffers = [null, null, null];
 const trackSources = [null, null, null];
+const trackGains = [null, null, null];
+
+// ---------- INIT ----------
+function initAudio() {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+    masterGain = audioContext.createGain();
+    masterGain.gain.value = 0.9;
+    masterGain.connect(audioContext.destination);
+  }
+}
 
 // ---------- FILE UPLOAD ----------
 fileInput.addEventListener("change", async () => {
-  if (!audioContext) {
-    audioContext = new AudioContext();
-  }
+  initAudio();
 
   for (const file of fileInput.files) {
     await addToLibrary(file);
@@ -24,109 +33,88 @@ fileInput.addEventListener("change", async () => {
 
 // ---------- LIBRARY ----------
 async function addToLibrary(file) {
-  const arrayBuffer = await file.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const buffer = await audioContext.decodeAudioData(await file.arrayBuffer());
 
   const li = document.createElement("li");
-  li.style.cursor = "pointer";
   li.textContent = file.name + " ";
+  li.style.cursor = "pointer";
 
   let previewSource = null;
 
-  const playBtn = document.createElement("button");
-  playBtn.textContent = "Play";
+  const play = document.createElement("button");
+  play.textContent = "Play";
 
-  const stopBtn = document.createElement("button");
-  stopBtn.textContent = "Stop";
+  const stop = document.createElement("button");
+  stop.textContent = "Stop";
 
-  // 🔹 PLAY (LIBRARY)
-  playBtn.onclick = async (e) => {
+  play.onclick = async (e) => {
     e.stopPropagation();
-
-    if (audioContext.state !== "running") {
-      await audioContext.resume();
-    }
+    if (audioContext.state !== "running") await audioContext.resume();
 
     if (previewSource) previewSource.stop();
-
     previewSource = audioContext.createBufferSource();
-    previewSource.buffer = audioBuffer;
-    previewSource.connect(audioContext.destination);
+    previewSource.buffer = buffer;
+    previewSource.connect(masterGain);
     previewSource.start();
   };
 
-  // 🔹 STOP (LIBRARY)
-  stopBtn.onclick = (e) => {
+  stop.onclick = (e) => {
     e.stopPropagation();
-    if (previewSource) {
-      previewSource.stop();
-      previewSource = null;
-    }
+    if (previewSource) previewSource.stop();
   };
 
-  // 🔹 SELECT LIBRARY ITEM
   li.onclick = () => {
-    document
-      .querySelectorAll("#fileList li")
+    document.querySelectorAll("#fileList li")
       .forEach(el => el.classList.remove("selected"));
 
     li.classList.add("selected");
-    selectedLibraryItem = {
-      name: file.name,
-      buffer: audioBuffer
-    };
+    selectedLibraryItem = { name: file.name, buffer };
   };
 
-  li.appendChild(playBtn);
-  li.appendChild(stopBtn);
+  li.append(play, stop);
   fileList.appendChild(li);
 }
 
 // ---------- TRACKS ----------
-tracks.forEach((track, index) => {
+tracks.forEach((track, i) => {
   const label = track.querySelector(".track-label");
-  const playBtn = track.querySelector(".track-play");
-  const stopBtn = track.querySelector(".track-stop");
+  const play = track.querySelector(".track-play");
+  const stop = track.querySelector(".track-stop");
+  const slider = track.querySelector(".track-gain");
 
-  // 🔹 ASSIGN TO TRACK
+  initAudio();
+
+  trackGains[i] = audioContext.createGain();
+  trackGains[i].gain.value = slider.value;
+  trackGains[i].connect(masterGain);
+
+  slider.oninput = () => {
+    trackGains[i].gain.value = slider.value;
+  };
+
   track.onclick = (e) => {
-    if (e.target.tagName === "BUTTON") return;
+    if (e.target.tagName === "BUTTON" || e.target.tagName === "INPUT") return;
     if (!selectedLibraryItem) return;
 
-    trackBuffers[index] = selectedLibraryItem.buffer;
-    label.textContent = `Track ${index + 1}: ${selectedLibraryItem.name}`;
+    trackBuffers[i] = selectedLibraryItem.buffer;
+    label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
   };
 
-  // 🔹 PLAY TRACK
-  playBtn.onclick = async () => {
-    if (!trackBuffers[index]) return;
+  play.onclick = async () => {
+    if (!trackBuffers[i]) return;
+    if (audioContext.state !== "running") await audioContext.resume();
 
-    if (!audioContext) {
-      audioContext = new AudioContext();
-    }
+    if (trackSources[i]) trackSources[i].stop();
 
-    if (audioContext.state !== "running") {
-      await audioContext.resume();
-    }
+    const src = audioContext.createBufferSource();
+    src.buffer = trackBuffers[i];
+    src.connect(trackGains[i]);
+    src.start();
 
-    if (trackSources[index]) {
-      trackSources[index].stop();
-      trackSources[index] = null;
-    }
-
-    const source = audioContext.createBufferSource();
-    source.buffer = trackBuffers[index];
-    source.connect(audioContext.destination);
-    source.start();
-
-    trackSources[index] = source;
+    trackSources[i] = src;
   };
 
-  // 🔹 STOP TRACK
-  stopBtn.onclick = () => {
-    if (trackSources[index]) {
-      trackSources[index].stop();
-      trackSources[index] = null;
-    }
+  stop.onclick = () => {
+    if (trackSources[i]) trackSources[i].stop();
   };
 });
