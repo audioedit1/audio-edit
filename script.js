@@ -4,60 +4,71 @@ const tracks = document.querySelectorAll(".track");
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-const audioFiles = [];
+let selectedSound = null; // { name, buffer }
+
 const trackBuffers = [null, null, null];
 
 fileInput.addEventListener("change", async () => {
-  const file = fileInput.files[0];
-  if (!file) return;
+  const files = Array.from(fileInput.files);
 
-  const arrayBuffer = await file.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  for (const file of files) {
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-  audioFiles.push({ file, buffer: audioBuffer });
+    const listItem = document.createElement("li");
+    listItem.textContent = file.name;
 
-  const listItem = document.createElement("li");
-  listItem.textContent = file.name;
+    // SELECT sound
+    listItem.onclick = () => {
+      selectedSound = { name: file.name, buffer: audioBuffer };
 
-  listItem.onclick = () => {
-    assignToTrack(audioBuffer, file.name);
-  };
+      document
+        .querySelectorAll("#fileList li")
+        .forEach(li => li.classList.remove("selected"));
 
-  const downloadBtn = document.createElement("span");
-  downloadBtn.textContent = " Download";
-  downloadBtn.className = "download-btn";
+      listItem.classList.add("selected");
+    };
 
-  downloadBtn.onclick = (e) => {
-    e.stopPropagation();
-    const url = URL.createObjectURL(file);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = file.name;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+    // DOWNLOAD
+    const downloadBtn = document.createElement("span");
+    downloadBtn.textContent = " Download";
+    downloadBtn.className = "download-btn";
 
-  listItem.appendChild(downloadBtn);
-  fileList.appendChild(listItem);
+    downloadBtn.onclick = (e) => {
+      e.stopPropagation();
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    listItem.appendChild(downloadBtn);
+    fileList.appendChild(listItem);
+  }
 
   fileInput.value = "";
 });
 
-function assignToTrack(buffer, name) {
-  for (let i = 0; i < trackBuffers.length; i++) {
-    if (!trackBuffers[i]) {
-      trackBuffers[i] = buffer;
-      tracks[i].textContent = `Track ${i + 1}: ${name}`;
-      tracks[i].classList.add("filled");
-      return;
-    }
-  }
-
-  alert("All tracks are full.");
-}
-
+// TRACK CLICK = assign OR play
 tracks.forEach((track, index) => {
   track.onclick = () => {
+    // ASSIGN
+    if (selectedSound) {
+      trackBuffers[index] = selectedSound.buffer;
+      track.textContent = `Track ${index + 1}: ${selectedSound.name}`;
+      track.classList.add("filled");
+      selectedSound = null;
+
+      document
+        .querySelectorAll("#fileList li")
+        .forEach(li => li.classList.remove("selected"));
+
+      return;
+    }
+
+    // PLAY
     if (!trackBuffers[index]) return;
 
     if (audioContext.state === "suspended") {

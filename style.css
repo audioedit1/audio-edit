@@ -74,3 +74,8 @@ header {
   color: #fff;
   border-color: #4ea1ff;
 }
+
+#fileList li.selected {
+  background: #1a1a1a;
+  border-left: 3px solid #4ea1ff;
+}
