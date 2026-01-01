@@ -2,6 +2,8 @@ const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
 const masterSlider = document.getElementById("masterGain");
+const playAllBtn = document.getElementById("playAll");
+const stopAllBtn = document.getElementById("stopAll");
 
 let audioContext;
 let masterGain;
@@ -32,8 +34,7 @@ function initAudio() {
 
 // ---------- MASTER ----------
 masterSlider.oninput = () => {
-  if (!masterGain) return;
-  masterGain.gain.value = masterSlider.value;
+  if (masterGain) masterGain.gain.value = masterSlider.value;
 };
 
 // ---------- FILE UPLOAD ----------
@@ -68,7 +69,6 @@ async function addToLibrary(file) {
     if (audioContext.state !== "running") await audioContext.resume();
 
     if (previewSource) previewSource.stop();
-
     previewSource = audioContext.createBufferSource();
     previewSource.buffer = buffer;
     previewSource.connect(previewGain);
@@ -81,8 +81,7 @@ async function addToLibrary(file) {
   };
 
   li.onclick = () => {
-    document
-      .querySelectorAll("#fileList li")
+    document.querySelectorAll("#fileList li")
       .forEach(el => el.classList.remove("selected"));
 
     li.classList.add("selected");
@@ -93,10 +92,9 @@ async function addToLibrary(file) {
   fileList.appendChild(li);
 }
 
-// ---------- GAIN RESOLUTION ----------
+// ---------- GAIN LOGIC ----------
 function updateTrackGain(i) {
   const anySolo = trackSolo.some(v => v);
-
   let gain = trackFaders[i];
 
   if (trackMuted[i]) gain = 0;
@@ -120,33 +118,23 @@ tracks.forEach((track, i) => {
   trackGains[i].gain.value = slider.value;
   trackGains[i].connect(masterGain);
 
-  // FADER
   slider.oninput = () => {
     trackFaders[i] = Number(slider.value);
     updateTrackGain(i);
   };
 
-  // MUTE
   muteBtn.onclick = () => {
     trackMuted[i] = !trackMuted[i];
     muteBtn.textContent = trackMuted[i] ? "Muted" : "Mute";
-    updateAllGains();
+    for (let t = 0; t < 3; t++) updateTrackGain(t);
   };
 
-  // SOLO
   soloBtn.onclick = () => {
     trackSolo[i] = !trackSolo[i];
     soloBtn.textContent = trackSolo[i] ? "Soloed" : "Solo";
-    updateAllGains();
+    for (let t = 0; t < 3; t++) updateTrackGain(t);
   };
 
-  function updateAllGains() {
-    for (let t = 0; t < 3; t++) {
-      updateTrackGain(t);
-    }
-  }
-
-  // ASSIGN
   track.onclick = (e) => {
     if (["BUTTON", "INPUT"].includes(e.target.tagName)) return;
     if (!selectedLibraryItem) return;
@@ -155,7 +143,6 @@ tracks.forEach((track, i) => {
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
   };
 
-  // PLAY
   play.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
@@ -170,8 +157,36 @@ tracks.forEach((track, i) => {
     trackSources[i] = src;
   };
 
-  // STOP
   stop.onclick = () => {
     if (trackSources[i]) trackSources[i].stop();
   };
 });
+
+// ---------- TRANSPORT ----------
+playAllBtn.onclick = async () => {
+  if (audioContext.state !== "running") await audioContext.resume();
+
+  const startTime = audioContext.currentTime + 0.05;
+
+  for (let i = 0; i < 3; i++) {
+    if (!trackBuffers[i]) continue;
+
+    if (trackSources[i]) trackSources[i].stop();
+
+    const src = audioContext.createBufferSource();
+    src.buffer = trackBuffers[i];
+    src.connect(trackGains[i]);
+    src.start(startTime);
+
+    trackSources[i] = src;
+  }
+};
+
+stopAllBtn.onclick = () => {
+  for (let i = 0; i < 3; i++) {
+    if (trackSources[i]) {
+      trackSources[i].stop();
+      trackSources[i] = null;
+    }
+  }
+};
