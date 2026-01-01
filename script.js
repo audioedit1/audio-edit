@@ -87,23 +87,33 @@ tracks.forEach((track, index) => {
   };
 
   playBtn.onclick = async () => {
-    if (!trackBuffers[index]) return;
+  if (!trackBuffers[index]) return;
 
-    if (audioContext.state === "suspended") {
-      await audioContext.resume();
-    }
+  // 🔴 GUARANTEE context exists
+  if (!audioContext) {
+    audioContext = new AudioContext();
+  }
 
-    if (trackSources[index]) {
-      trackSources[index].stop();
-    }
+  // 🔴 GUARANTEE context is running
+  if (audioContext.state !== "running") {
+    await audioContext.resume();
+  }
 
-    const source = audioContext.createBufferSource();
-    source.buffer = trackBuffers[index];
-    source.connect(audioContext.destination);
-    source.start();
+  // Stop previous source if any
+  if (trackSources[index]) {
+    trackSources[index].stop();
+    trackSources[index] = null;
+  }
 
-    trackSources[index] = source;
-  };
+  // 🔴 CREATE FRESH SOURCE (required by Web Audio spec)
+  const source = audioContext.createBufferSource();
+  source.buffer = trackBuffers[index];
+  source.connect(audioContext.destination);
+  source.start(0);
+
+  trackSources[index] = source;
+};
+
 
   stopBtn.onclick = () => {
     if (trackSources[index]) {
