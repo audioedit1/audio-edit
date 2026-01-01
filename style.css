@@ -79,3 +79,7 @@ header {
   background: #1a1a1a;
   border-left: 3px solid #4ea1ff;
 }
+
+#fileList li.selected {
+  outline: 1px solid #4da3ff;
+}

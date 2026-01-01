@@ -3,7 +3,10 @@ const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
 
 let audioContext = null;
-const libraryBuffers = [];
+let selectedLibraryItem = null;
+
+// Track state
+const trackBuffers = [null, null, null];
 
 fileInput.addEventListener("change", async () => {
   if (!audioContext) {
@@ -12,7 +15,6 @@ fileInput.addEventListener("change", async () => {
 
   for (const file of fileInput.files) {
     await addToLibrary(file);
-    assignToNextTrack(file.name);
   }
 
   fileInput.value = "";
@@ -22,10 +24,9 @@ async function addToLibrary(file) {
   const arrayBuffer = await file.arrayBuffer();
   const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-  libraryBuffers.push({ name: file.name, buffer: audioBuffer });
-
   const li = document.createElement("li");
   li.textContent = file.name + " ";
+  li.style.cursor = "pointer";
 
   let previewSource = null;
 
@@ -35,14 +36,14 @@ async function addToLibrary(file) {
   const stopBtn = document.createElement("button");
   stopBtn.textContent = "Stop";
 
-  playBtn.onclick = async () => {
+  playBtn.onclick = async (e) => {
+    e.stopPropagation();
+
     if (audioContext.state === "suspended") {
       await audioContext.resume();
     }
 
-    if (previewSource) {
-      previewSource.stop();
-    }
+    if (previewSource) previewSource.stop();
 
     previewSource = audioContext.createBufferSource();
     previewSource.buffer = audioBuffer;
@@ -50,11 +51,19 @@ async function addToLibrary(file) {
     previewSource.start();
   };
 
-  stopBtn.onclick = () => {
-    if (previewSource) {
-      previewSource.stop();
-      previewSource = null;
-    }
+  stopBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (previewSource) previewSource.stop();
+  };
+
+  // Select library item
+  li.onclick = () => {
+    document
+      .querySelectorAll("#fileList li")
+      .forEach(el => el.classList.remove("selected"));
+
+    li.classList.add("selected");
+    selectedLibraryItem = { name: file.name, buffer: audioBuffer };
   };
 
   li.appendChild(playBtn);
@@ -62,11 +71,13 @@ async function addToLibrary(file) {
   fileList.appendChild(li);
 }
 
-let trackIndex = 0;
+// Assign selected sound to track
+tracks.forEach(track => {
+  track.onclick = () => {
+    if (!selectedLibraryItem) return;
 
-function assignToNextTrack(filename) {
-  if (trackIndex >= tracks.length) return;
-
-  tracks[trackIndex].textContent = `Track ${trackIndex + 1}: ${filename}`;
-  trackIndex++;
-}
+    const index = Number(track.dataset.track);
+    trackBuffers[index] = selectedLibraryItem.buffer;
+    track.textContent = `Track ${index + 1}: ${selectedLibraryItem.name}`;
+  };
+});
