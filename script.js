@@ -3,35 +3,37 @@ const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
 const masterSlider = document.getElementById("masterGain");
 
-let audioContext = null;
-let masterGain = null;
-let previewGain = null;
+let audioContext;
+let masterGain;
+let previewGain;
 let selectedLibraryItem = null;
 
 const trackBuffers = [null, null, null];
 const trackSources = [null, null, null];
 const trackGains = [null, null, null];
+const trackFaders = [1, 1, 1];
 const trackMuted = [false, false, false];
 const trackSolo = [false, false, false];
 
 // ---------- INIT ----------
 function initAudio() {
-  if (!audioContext) {
-    audioContext = new AudioContext();
+  if (audioContext) return;
 
-    masterGain = audioContext.createGain();
-    masterGain.gain.value = masterSlider.value;
-    masterGain.connect(audioContext.destination);
+  audioContext = new AudioContext();
 
-    previewGain = audioContext.createGain();
-    previewGain.gain.value = 1;
-    previewGain.connect(masterGain);
-  }
+  masterGain = audioContext.createGain();
+  masterGain.gain.value = masterSlider.value;
+  masterGain.connect(audioContext.destination);
+
+  previewGain = audioContext.createGain();
+  previewGain.gain.value = 1;
+  previewGain.connect(masterGain);
 }
 
-// ---------- MASTER FADER ----------
+// ---------- MASTER ----------
 masterSlider.oninput = () => {
-  if (masterGain) masterGain.gain.value = masterSlider.value;
+  if (!masterGain) return;
+  masterGain.gain.value = masterSlider.value;
 };
 
 // ---------- FILE UPLOAD ----------
@@ -45,7 +47,9 @@ fileInput.addEventListener("change", async () => {
 
 // ---------- LIBRARY ----------
 async function addToLibrary(file) {
-  const buffer = await audioContext.decodeAudioData(await file.arrayBuffer());
+  const buffer = await audioContext.decodeAudioData(
+    await file.arrayBuffer()
+  );
 
   const li = document.createElement("li");
   li.textContent = file.name + " ";
@@ -62,6 +66,7 @@ async function addToLibrary(file) {
   play.onclick = async (e) => {
     e.stopPropagation();
     if (audioContext.state !== "running") await audioContext.resume();
+
     if (previewSource) previewSource.stop();
 
     previewSource = audioContext.createBufferSource();
@@ -76,7 +81,8 @@ async function addToLibrary(file) {
   };
 
   li.onclick = () => {
-    document.querySelectorAll("#fileList li")
+    document
+      .querySelectorAll("#fileList li")
       .forEach(el => el.classList.remove("selected"));
 
     li.classList.add("selected");
@@ -87,19 +93,16 @@ async function addToLibrary(file) {
   fileList.appendChild(li);
 }
 
-// ---------- SOLO / MUTE LOGIC ----------
-function updateSoloMute() {
+// ---------- GAIN RESOLUTION ----------
+function updateTrackGain(i) {
   const anySolo = trackSolo.some(v => v);
 
-  trackGains.forEach((gain, i) => {
-    if (!gain) return;
+  let gain = trackFaders[i];
 
-    if (anySolo) {
-      gain.gain.value = trackSolo[i] ? gain.gain.value : 0;
-    } else {
-      gain.gain.value = trackMuted[i] ? 0 : gain.gain.value;
-    }
-  });
+  if (trackMuted[i]) gain = 0;
+  if (anySolo && !trackSolo[i]) gain = 0;
+
+  trackGains[i].gain.value = gain;
 }
 
 // ---------- TRACKS ----------
@@ -117,23 +120,33 @@ tracks.forEach((track, i) => {
   trackGains[i].gain.value = slider.value;
   trackGains[i].connect(masterGain);
 
+  // FADER
   slider.oninput = () => {
-    trackGains[i].gain.value = slider.value;
-    updateSoloMute();
+    trackFaders[i] = Number(slider.value);
+    updateTrackGain(i);
   };
 
+  // MUTE
   muteBtn.onclick = () => {
     trackMuted[i] = !trackMuted[i];
     muteBtn.textContent = trackMuted[i] ? "Muted" : "Mute";
-    updateSoloMute();
+    updateAllGains();
   };
 
+  // SOLO
   soloBtn.onclick = () => {
     trackSolo[i] = !trackSolo[i];
     soloBtn.textContent = trackSolo[i] ? "Soloed" : "Solo";
-    updateSoloMute();
+    updateAllGains();
   };
 
+  function updateAllGains() {
+    for (let t = 0; t < 3; t++) {
+      updateTrackGain(t);
+    }
+  }
+
+  // ASSIGN
   track.onclick = (e) => {
     if (["BUTTON", "INPUT"].includes(e.target.tagName)) return;
     if (!selectedLibraryItem) return;
@@ -142,6 +155,7 @@ tracks.forEach((track, i) => {
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
   };
 
+  // PLAY
   play.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
@@ -156,6 +170,7 @@ tracks.forEach((track, i) => {
     trackSources[i] = src;
   };
 
+  // STOP
   stop.onclick = () => {
     if (trackSources[i]) trackSources[i].stop();
   };
