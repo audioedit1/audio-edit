@@ -7,12 +7,13 @@
 </head>
 <body>
 
+  <!-- HEADER -->
   <header>
     <h1>Audio Edit</h1>
-    <p>Upload, edit, and prepare sounds in your browser.</p>
+    <p>Upload, edit, and arrange sounds in your browser.</p>
   </header>
 
-  <!-- MASTER SECTION -->
+  <!-- MASTER -->
   <section class="master">
     <h2>Master</h2>
     <label>
@@ -28,16 +29,16 @@
     </label>
   </section>
 
-<section class="transport">
-  <button id="playAll">Play</button>
-  <button id="stopAll">Stop</button>
-</section>
-
+  <!-- TRANSPORT -->
+  <section class="transport">
+    <button id="playAll">Play</button>
+    <button id="stopAll">Stop</button>
+  </section>
 
   <!-- EDITOR / TRACKS -->
   <main>
     <section class="editor">
-      <h2>Editor</h2>
+      <h2>Tracks</h2>
 
       <!-- TRACK 1 -->
       <div class="track" data-track="0">
@@ -54,6 +55,17 @@
           step="0.01"
           value="1"
         />
+
+        <label class="offset">
+          Start (s)
+          <input
+            type="number"
+            class="track-offset"
+            min="0"
+            step="0.1"
+            value="0"
+          />
+        </label>
 
         <button class="track-play">Play</button>
         <button class="track-stop">Stop</button>
@@ -75,6 +87,17 @@
           value="1"
         />
 
+        <label class="offset">
+          Start (s)
+          <input
+            type="number"
+            class="track-offset"
+            min="0"
+            step="0.1"
+            value="0"
+          />
+        </label>
+
         <button class="track-play">Play</button>
         <button class="track-stop">Stop</button>
       </div>
@@ -94,6 +117,17 @@
           step="0.01"
           value="1"
         />
+
+        <label class="offset">
+          Start (s)
+          <input
+            type="number"
+            class="track-offset"
+            min="0"
+            step="0.1"
+            value="0"
+          />
+        </label>
 
         <button class="track-play">Play</button>
         <button class="track-stop">Stop</button>
@@ -116,6 +150,7 @@
     <ul id="fileList"></ul>
   </section>
 
+  <!-- SCRIPT -->
   <script src="script.js"></script>
 </body>
 </html>
