@@ -16,7 +16,6 @@ const trackGains = [null, null, null];
 const trackFaders = [1, 1, 1];
 const trackMuted = [false, false, false];
 const trackSolo = [false, false, false];
-const trackOffsets = [0, 0, 0];
 
 // ---------- INIT ----------
 function initAudio() {
@@ -70,6 +69,7 @@ async function addToLibrary(file) {
     if (audioContext.state !== "running") await audioContext.resume();
 
     if (previewSource) previewSource.stop();
+
     previewSource = audioContext.createBufferSource();
     previewSource.buffer = buffer;
     previewSource.connect(previewGain);
@@ -113,7 +113,6 @@ tracks.forEach((track, i) => {
   const slider = track.querySelector(".track-gain");
   const muteBtn = track.querySelector(".track-mute");
   const soloBtn = track.querySelector(".track-solo");
-  const offsetInput = track.querySelector(".track-offset");
 
   initAudio();
 
@@ -124,10 +123,6 @@ tracks.forEach((track, i) => {
   slider.oninput = () => {
     trackFaders[i] = Number(slider.value);
     updateTrackGain(i);
-  };
-
-  offsetInput.oninput = () => {
-    trackOffsets[i] = Math.max(0, Number(offsetInput.value));
   };
 
   muteBtn.onclick = () => {
@@ -150,18 +145,23 @@ tracks.forEach((track, i) => {
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
   };
 
+  // ▶ Track Play (preview, respects offset)
   play.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
 
-    if (trackSources[i]) trackSources[i].stop();
+    if (trackSources[i]) {
+      trackSources[i].stop();
+      trackSources[i] = null;
+    }
+
+    const offsetValue =
+      parseFloat(track.querySelector(".track-offset").value) || 0;
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-
-    const when = audioContext.currentTime + trackOffsets[i];
-    src.start(when);
+    src.start(audioContext.currentTime + offsetValue);
 
     trackSources[i] = src;
   };
@@ -189,17 +189,21 @@ playAllBtn.onclick = async () => {
       trackSources[i] = null;
     }
 
+    const offsetValue =
+      parseFloat(tracks[i].querySelector(".track-offset").value) || 0;
+
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
+    src.start(baseTime + offsetValue);
 
-    src.start(baseTime + trackOffsets[i]);
     trackSources[i] = src;
   }
 };
 
 stopAllBtn.onclick = () => {
   if (!audioContext) return;
+
   for (let i = 0; i < 3; i++) {
     if (trackSources[i]) {
       trackSources[i].stop();
