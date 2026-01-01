@@ -50,3 +50,9 @@ header {
   cursor: pointer;
   color: #4ea1ff;
 }
+
+.download-btn {
+  margin-left: 12px;
+  cursor: pointer;
+  color: #4ea1ff;
+}
