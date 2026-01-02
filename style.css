@@ -3,13 +3,58 @@ body {
   font-family: Arial, sans-serif;
   background: #0f0f0f;
   color: #eaeaea;
-  user-select: none;
 }
 
 header {
   padding: 40px;
   text-align: center;
   border-bottom: 1px solid #222;
+}
+
+.editor-placeholder {
+  margin: 60px auto;
+  width: 80%;
+  height: 300px;
+  border: 2px dashed #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #666;
+}
+.upload-section {
+  width: 80%;
+  margin: 40px auto;
+  padding: 20px;
+  border-top: 1px solid #222;
+}
+
+.upload-section h2 {
+  margin-bottom: 10px;
+}
+
+#fileList {
+  list-style: none;
+  padding: 0;
+}
+
+#fileList li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid #222;
+  font-size: 14px;
+}
+
+.download-btn {
+  cursor: pointer;
+  color: #4ea1ff;
+}
+
+.download-btn {
+  margin-left: 12px;
+  cursor: pointer;
+  color: #4ea1ff;
 }
 
 .editor {
@@ -20,26 +65,40 @@ header {
 .track {
   border: 1px solid #333;
   padding: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  color: #777;
 }
 
 .track.filled {
-  border-color: #4da3ff;
-  color: white;
+  color: #fff;
+  border-color: #4ea1ff;
 }
+
+#fileList li.selected {
+  background: #1a1a1a;
+  border-left: 3px solid #4ea1ff;
+}
+
+#fileList li.selected {
+  outline: 1px solid #4da3ff;
+}
+
+/* ===== TIMELINE ===== */
 
 .timeline {
   position: relative;
   height: 24px;
   background: #1a1a1a;
   border: 1px solid #333;
-  margin: 8px 0;
+  margin: 6px 0;
+  overflow: hidden;
 }
 
 .clip {
   position: absolute;
-  top: 3px;
   left: 0;
+  top: 2px;
   height: 18px;
   width: 80px;
   background: #3b82f6;
@@ -47,31 +106,52 @@ header {
   cursor: grab;
 }
 
+/* ===== PLAYHEAD ===== */
+
 .playhead {
   position: absolute;
   top: 0;
+  left: 0;
   width: 2px;
   height: 100%;
   background: red;
   pointer-events: none;
 }
 
+.loop-controls {
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+#fileList {
+  margin-top: 10px;
+  padding-left: 0;
+}
+
+#fileList li {
+  list-style: none;
+  padding: 6px;
+  margin-bottom: 4px;
+  border: 1px solid #333;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#fileList li.selected {
+  outline: 2px solid #4da3ff;
+}
+
 .loop-region {
   position: absolute;
+  top: 0;
   height: 100%;
-  background: rgba(77,163,255,0.3);
+  background: rgba(77, 163, 255, 0.25);
+  pointer-events: none;
 }
-
-.loop-handle {
-  position: absolute;
-  width: 6px;
-  height: 100%;
-  cursor: ew-resize;
-  z-index: 3;
-}
-
-.loop-start { background: #00c853; }
-.loop-end { background: #ff5252; }
 
 .track-mute.active {
   background: #b00020;
@@ -83,25 +163,20 @@ header {
   color: black;
 }
 
-#fileList li {
-  border: 1px solid #333;
-  padding: 6px;
-  margin-bottom: 4px;
-  cursor: pointer;
+.loop-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: #4da3ff;
+  cursor: ew-resize;
+  z-index: 3;
 }
 
-#fileList li.selected {
-  outline: 2px solid #4da3ff;
+.loop-handle.loop-start {
+  background: #00c853;
 }
 
-.clip {
-  pointer-events: auto;
-}
-
-.timeline {
-  pointer-events: auto;
-}
-
-* {
-  user-select: none;
+.loop-handle.loop-end {
+  background: #ff5252;
 }
