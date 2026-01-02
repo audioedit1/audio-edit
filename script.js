@@ -342,14 +342,16 @@ stopAllBtn.onclick = stopAll;
 // =====================
 document.addEventListener("mousedown", (e) => {
   if (e.target.classList.contains("loop-start")) {
+    e.preventDefault();            // ← IMPORTANT
     draggingLoop = "start";
-    draggingTimeline = e.target.closest(".timeline");
   }
+
   if (e.target.classList.contains("loop-end")) {
+    e.preventDefault();            // ← IMPORTANT
     draggingLoop = "end";
-    draggingTimeline = e.target.closest(".timeline");
   }
 });
+
 
 document.addEventListener("mousemove", (e) => {
   if (!draggingLoop || !draggingTimeline) return;

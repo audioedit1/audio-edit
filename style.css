@@ -181,3 +181,14 @@ header {
 #fileList li.selected {
   outline: 2px solid #4da3ff;
 }
+
+/* === PREVENT TEXT SELECTION WHILE DRAGGING === */
+body,
+.track,
+.timeline,
+.loop-handle,
+.clip {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
