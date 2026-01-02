@@ -34,7 +34,6 @@ const trackSolo = [false, false, false];
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = 4;
-let draggingLoop = null;
 
 // =====================
 // PLAYHEAD
@@ -66,60 +65,15 @@ masterSlider.oninput = () => {
 };
 
 // =====================
-// LOOP VISUAL
-// =====================
-function updateLoopOverlay() {
-  document.querySelectorAll(".timeline").forEach(tl => {
-    const region = tl.querySelector(".loop-region");
-    const startH = tl.querySelector(".loop-start");
-    const endH = tl.querySelector(".loop-end");
-
-    if (!loopEnabled || loopEnd <= loopStart) {
-      region.style.display = "none";
-      startH.style.display = "none";
-      endH.style.display = "none";
-      return;
-    }
-
-    const left = loopStart * 100;
-    const width = (loopEnd - loopStart) * 100;
-
-    region.style.display = "block";
-    region.style.left = left + "px";
-    region.style.width = width + "px";
-
-    startH.style.display = "block";
-    endH.style.display = "block";
-    startH.style.left = left + "px";
-    endH.style.left = (left + width) + "px";
-  });
-}
-
-// =====================
-// LOOP INPUTS
-// =====================
-loopStartInput.oninput = () => {
-  loopStart = Math.max(0, Number(loopStartInput.value));
-  updateLoopOverlay();
-};
-
-loopEndInput.oninput = () => {
-  loopEnd = Math.max(loopStart, Number(loopEndInput.value));
-  updateLoopOverlay();
-};
-
-loopEnabledCheckbox.onchange = () => {
-  loopEnabled = loopEnabledCheckbox.checked;
-  updateLoopOverlay();
-};
-
-// =====================
 // FILE UPLOAD
 // =====================
 fileInput.onchange = async () => {
   initAudio();
+
   for (const file of fileInput.files) {
-    const buffer = await audioContext.decodeAudioData(await file.arrayBuffer());
+    const buffer = await audioContext.decodeAudioData(
+      await file.arrayBuffer()
+    );
 
     const li = document.createElement("li");
     li.textContent = file.name;
@@ -133,6 +87,7 @@ fileInput.onchange = async () => {
 
     fileList.appendChild(li);
   }
+
   fileInput.value = "";
 };
 
@@ -141,17 +96,18 @@ fileInput.onchange = async () => {
 // =====================
 function updateTrackGain(i) {
   const anySolo = trackSolo.some(v => v);
-  let g = trackFaders[i];
+  let gain = trackFaders[i];
 
-  if (trackMuted[i]) g = 0;
-  if (anySolo && !trackSolo[i]) g = 0;
+  if (trackMuted[i]) gain = 0;
+  if (anySolo && !trackSolo[i]) gain = 0;
 
-  trackGains[i].gain.value = g;
-  tracks[i].style.opacity = anySolo && !trackSolo[i] ? "0.4" : "1";
+  trackGains[i].gain.value = gain;
+  tracks[i].style.opacity =
+    anySolo && !trackSolo[i] ? "0.4" : "1";
 }
 
 // =====================
-// TRACKS
+// TRACK SETUP
 // =====================
 tracks.forEach((track, i) => {
   const label = track.querySelector(".track-label");
@@ -166,9 +122,25 @@ tracks.forEach((track, i) => {
   const clip = track.querySelector(".clip");
 
   initAudio();
+
   trackGains[i] = audioContext.createGain();
   trackGains[i].connect(masterGain);
 
+  // ---------------------
+  // ASSIGN FROM LIBRARY
+  // ---------------------
+  track.addEventListener("click", (e) => {
+    if (!selectedLibraryItem) return;
+    if (e.target.closest("button") || e.target.closest("input")) return;
+
+    trackBuffers[i] = selectedLibraryItem.buffer;
+    label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
+    track.classList.add("filled");
+  });
+
+  // ---------------------
+  // GAIN / MUTE / SOLO
+  // ---------------------
   gainSlider.oninput = () => {
     trackFaders[i] = Number(gainSlider.value);
     updateTrackGain(i);
@@ -188,15 +160,9 @@ tracks.forEach((track, i) => {
     for (let t = 0; t < 3; t++) updateTrackGain(t);
   };
 
-  track.onclick = (e) => {
-    if (!selectedLibraryItem) return;
-    if (["BUTTON", "INPUT"].includes(e.target.tagName)) return;
-
-    trackBuffers[i] = selectedLibraryItem.buffer;
-    label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
-    track.classList.add("filled");
-  };
-
+  // ---------------------
+  // PLAY / STOP
+  // ---------------------
   playBtn.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
@@ -214,61 +180,42 @@ tracks.forEach((track, i) => {
 
   stopBtn.onclick = () => trackSources[i]?.stop();
 
-  // CLIP DRAG
+  // =====================
+  // 🔥 DRAG & DROP (FIXED)
+  // =====================
   let dragging = false;
-  let startX = 0;
-  let startLeft = 0;
+  let dragStartX = 0;
+  let clipStartLeft = 0;
 
-  clip.onmousedown = (e) => {
+  clip.addEventListener("mousedown", (e) => {
     e.preventDefault();
     dragging = true;
-    startX = e.clientX;
-    startLeft = clip.offsetLeft;
-  };
+    dragStartX = e.clientX;
+    clipStartLeft = clip.offsetLeft;
+    clip.style.cursor = "grabbing";
+  });
 
   document.addEventListener("mousemove", (e) => {
     if (!dragging) return;
-    let x = startLeft + (e.clientX - startX);
-    x = Math.max(0, x);
-    x = Math.min(x, timeline.clientWidth - clip.clientWidth);
-    clip.style.left = x + "px";
-    offsetInput.value = (x / 100).toFixed(2);
+
+    const dx = e.clientX - dragStartX;
+    let newLeft = clipStartLeft + dx;
+
+    newLeft = Math.max(0, newLeft);
+    newLeft = Math.min(
+      newLeft,
+      timeline.clientWidth - clip.clientWidth
+    );
+
+    clip.style.left = newLeft + "px";
+    offsetInput.value = (newLeft / 100).toFixed(2);
   });
 
-  document.addEventListener("mouseup", () => dragging = false);
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+    clip.style.cursor = "grab";
+  });
 });
-
-// =====================
-// PLAYHEAD
-// =====================
-function startPlayhead() {
-  stopPlayhead();
-  playheadStartTime =
-    audioContext.currentTime - (loopEnabled ? loopStart : 0);
-  playheadRAF = requestAnimationFrame(updatePlayhead);
-}
-
-function stopPlayhead() {
-  cancelAnimationFrame(playheadRAF);
-  document.querySelectorAll(".playhead")
-    .forEach(p => p.style.left = "0px");
-}
-
-function updatePlayhead() {
-  const t = audioContext.currentTime - playheadStartTime;
-
-  if (loopEnabled && t >= loopEnd) {
-    stopAll();
-    playAll();
-    return;
-  }
-
-  const x = t * 100;
-  document.querySelectorAll(".playhead")
-    .forEach(p => p.style.left = x + "px");
-
-  playheadRAF = requestAnimationFrame(updatePlayhead);
-}
 
 // =====================
 // TRANSPORT
@@ -284,63 +231,21 @@ function playAll() {
 
     trackSources[i]?.stop();
 
-    const offset = Number(track.querySelector(".track-offset").value) || 0;
-    const timelineStart = loopEnabled ? Math.max(offset, loopStart) : offset;
-    const bufferOffset = loopEnabled ? Math.max(0, loopStart - offset) : 0;
+    const offset =
+      Number(track.querySelector(".track-offset").value) || 0;
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-    src.start(baseTime + (timelineStart - (loopEnabled ? loopStart : 0)), bufferOffset);
+    src.start(baseTime, offset);
 
     trackSources[i] = src;
   });
-
-  startPlayhead();
 }
 
 function stopAll() {
   trackSources.forEach(s => s?.stop());
-  stopPlayhead();
 }
 
 playAllBtn.onclick = playAll;
 stopAllBtn.onclick = stopAll;
-
-// =====================
-// LOOP HANDLE DRAG
-// =====================
-document.addEventListener("mousedown", (e) => {
-  if (e.target.classList.contains("loop-start")) {
-    e.preventDefault();
-    draggingLoop = "start";
-  }
-  if (e.target.classList.contains("loop-end")) {
-    e.preventDefault();
-    draggingLoop = "end";
-  }
-});
-
-document.addEventListener("mousemove", (e) => {
-  if (!draggingLoop) return;
-
-  const tl = document.querySelector(".timeline");
-  const rect = tl.getBoundingClientRect();
-  const seconds = Math.max(0, (e.clientX - rect.left) / 100);
-
-  if (draggingLoop === "start") {
-    loopStart = Math.min(seconds, loopEnd - 0.1);
-    loopStartInput.value = loopStart.toFixed(2);
-  }
-
-  if (draggingLoop === "end") {
-    loopEnd = Math.max(seconds, loopStart + 0.1);
-    loopEndInput.value = loopEnd.toFixed(2);
-  }
-
-  updateLoopOverlay();
-});
-
-document.addEventListener("mouseup", () => draggingLoop = null);
-
-updateLoopOverlay();
