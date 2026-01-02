@@ -1,12 +1,9 @@
-/* =====================
-   GLOBAL
-===================== */
-
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background: #0f0f0f;
   color: #eaeaea;
+  user-select: none;
 }
 
 header {
@@ -14,31 +11,6 @@ header {
   text-align: center;
   border-bottom: 1px solid #222;
 }
-
-/* =====================
-   MASTER / TRANSPORT
-===================== */
-
-.master,
-.transport {
-  width: 80%;
-  margin: 20px auto;
-}
-
-.transport button {
-  margin-right: 8px;
-}
-
-.loop-controls {
-  margin-top: 8px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-/* =====================
-   EDITOR / TRACKS
-===================== */
 
 .editor {
   width: 80%;
@@ -48,23 +20,13 @@ header {
 .track {
   border: 1px solid #333;
   padding: 16px;
-  margin-bottom: 10px;
-  cursor: pointer;
+  margin-bottom: 12px;
 }
 
-.track-label {
-  display: inline-block;
-  min-width: 160px;
+.track.filled {
+  border-color: #4da3ff;
+  color: white;
 }
-
-.track-gain {
-  width: 120px;
-  margin: 0 8px;
-}
-
-/* =====================
-   TIMELINE
-===================== */
 
 .timeline {
   position: relative;
@@ -72,74 +34,44 @@ header {
   background: #1a1a1a;
   border: 1px solid #333;
   margin: 8px 0;
-  overflow: hidden;
 }
 
-/* Clip (visual only, not interactive for now) */
 .clip {
   position: absolute;
+  top: 3px;
   left: 0;
-  top: 2px;
   height: 18px;
   width: 80px;
   background: #3b82f6;
   border-radius: 3px;
-  pointer-events: none; /* IMPORTANT: allow loop handle drag */
+  cursor: grab;
 }
-
-/* =====================
-   PLAYHEAD
-===================== */
 
 .playhead {
   position: absolute;
   top: 0;
-  left: 0;
   width: 2px;
   height: 100%;
   background: red;
   pointer-events: none;
-  z-index: 4;
 }
-
-/* =====================
-   LOOP REGION
-===================== */
 
 .loop-region {
   position: absolute;
-  top: 0;
   height: 100%;
-  background: rgba(77, 163, 255, 0.25);
-  pointer-events: none;
-  z-index: 1;
+  background: rgba(77,163,255,0.3);
 }
-
-/* =====================
-   LOOP HANDLES
-===================== */
 
 .loop-handle {
   position: absolute;
-  top: 0;
   width: 6px;
   height: 100%;
   cursor: ew-resize;
-  z-index: 5;
-  pointer-events: auto;
+  z-index: 3;
 }
 
-.loop-handle.loop-start {
-  background: #00c853;
-}
-
-.loop-handle.loop-end {
-  background: #ff5252;
-}
-
-/* =====================
-   MUTE / SOLO STATES
-===================== */
+.loop-start { background: #00c853; }
+.loop-end { background: #ff5252; }
 
 .track-mute.active {
   background: #b00020;
@@ -151,44 +83,13 @@ header {
   color: black;
 }
 
-/* =====================
-   LIBRARY
-===================== */
-
-.upload-section {
-  width: 80%;
-  margin: 40px auto;
-  padding-top: 20px;
-  border-top: 1px solid #222;
-}
-
-#fileList {
-  margin-top: 10px;
-  padding-left: 0;
-}
-
 #fileList li {
-  list-style: none;
+  border: 1px solid #333;
   padding: 6px;
   margin-bottom: 4px;
-  border: 1px solid #333;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  cursor: pointer;
 }
 
 #fileList li.selected {
   outline: 2px solid #4da3ff;
-}
-
-/* === PREVENT TEXT SELECTION WHILE DRAGGING === */
-body,
-.track,
-.timeline,
-.loop-handle,
-.clip {
-  user-select: none;
-  -webkit-user-select: none;
-  -ms-user-select: none;
 }
