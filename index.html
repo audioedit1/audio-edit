@@ -30,10 +30,28 @@
   </section>
 
   <!-- TRANSPORT -->
-  <section class="transport">
-    <button id="playAll">Play</button>
-    <button id="stopAll">Stop</button>
-  </section>
+ <section class="transport">
+  <button id="playAll">Play</button>
+  <button id="stopAll">Stop</button>
+
+  <div class="loop-controls">
+    <label>
+      Loop A (s)
+      <input type="number" id="loopStart" min="0" step="0.1" value="0">
+    </label>
+
+    <label>
+      Loop B (s)
+      <input type="number" id="loopEnd" min="0" step="0.1" value="4">
+    </label>
+
+    <label>
+      <input type="checkbox" id="loopEnabled">
+      Loop
+    </label>
+  </div>
+</section>
+
 
   <!-- TRACKS -->
   <main>
