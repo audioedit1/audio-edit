@@ -1,10 +1,17 @@
-// ===== GLOBAL STATE =====
+// =====================
+// GLOBAL STATE
+// =====================
 const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
+
 const masterSlider = document.getElementById("masterGain");
 const playAllBtn = document.getElementById("playAll");
 const stopAllBtn = document.getElementById("stopAll");
+
+const loopStartInput = document.getElementById("loopStart");
+const loopEndInput = document.getElementById("loopEnd");
+const loopEnabledCheckbox = document.getElementById("loopEnabled");
 
 let audioContext = null;
 let masterGain = null;
@@ -18,7 +25,18 @@ const trackFaders = [1, 1, 1];
 const trackMuted = [false, false, false];
 const trackSolo = [false, false, false];
 
-// ===== AUDIO INIT =====
+// Loop
+let loopEnabled = false;
+let loopStart = 0;
+let loopEnd = 4;
+
+// Playhead
+let playheadRAF = null;
+let playheadStartTime = 0;
+
+// =====================
+// AUDIO INIT
+// =====================
 function initAudio() {
   if (audioContext) return;
 
@@ -32,12 +50,31 @@ function initAudio() {
   previewGain.connect(masterGain);
 }
 
-// ===== MASTER =====
+// =====================
+// MASTER
+// =====================
 masterSlider.oninput = () => {
   if (masterGain) masterGain.gain.value = masterSlider.value;
 };
 
-// ===== FILE UPLOAD =====
+// =====================
+// LOOP CONTROLS
+// =====================
+loopStartInput.oninput = () => {
+  loopStart = Math.max(0, Number(loopStartInput.value));
+};
+
+loopEndInput.oninput = () => {
+  loopEnd = Math.max(loopStart, Number(loopEndInput.value));
+};
+
+loopEnabledCheckbox.onchange = () => {
+  loopEnabled = loopEnabledCheckbox.checked;
+};
+
+// =====================
+// FILE UPLOAD
+// =====================
 fileInput.addEventListener("change", async () => {
   initAudio();
   for (const file of fileInput.files) {
@@ -46,7 +83,9 @@ fileInput.addEventListener("change", async () => {
   fileInput.value = "";
 });
 
-// ===== LIBRARY =====
+// =====================
+// LIBRARY
+// =====================
 async function addToLibrary(file) {
   const buffer = await audioContext.decodeAudioData(
     await file.arrayBuffer()
@@ -60,13 +99,14 @@ async function addToLibrary(file) {
 
   const play = document.createElement("button");
   play.textContent = "Play";
+
   const stop = document.createElement("button");
   stop.textContent = "Stop";
 
   play.onclick = async (e) => {
     e.stopPropagation();
     if (audioContext.state !== "running") await audioContext.resume();
-    if (previewSource) previewSource.stop();
+    previewSource?.stop();
 
     previewSource = audioContext.createBufferSource();
     previewSource.buffer = buffer;
@@ -79,6 +119,7 @@ async function addToLibrary(file) {
   li.onclick = () => {
     document.querySelectorAll("#fileList li")
       .forEach(el => el.classList.remove("selected"));
+
     li.classList.add("selected");
     selectedLibraryItem = { name: file.name, buffer };
   };
@@ -87,7 +128,9 @@ async function addToLibrary(file) {
   fileList.appendChild(li);
 }
 
-// ===== GAIN LOGIC =====
+// =====================
+// GAIN LOGIC
+// =====================
 function updateTrackGain(i) {
   const anySolo = trackSolo.some(v => v);
   let gain = trackFaders[i];
@@ -98,7 +141,9 @@ function updateTrackGain(i) {
   trackGains[i].gain.value = gain;
 }
 
-// ===== TRACKS =====
+// =====================
+// TRACKS
+// =====================
 tracks.forEach((track, i) => {
   const label = track.querySelector(".track-label");
   const playBtn = track.querySelector(".track-play");
@@ -107,6 +152,7 @@ tracks.forEach((track, i) => {
   const muteBtn = track.querySelector(".track-mute");
   const soloBtn = track.querySelector(".track-solo");
   const offsetInput = track.querySelector(".track-offset");
+
   const timeline = track.querySelector(".timeline");
   const clip = track.querySelector(".clip");
 
@@ -116,7 +162,7 @@ tracks.forEach((track, i) => {
   trackGains[i].connect(masterGain);
 
   slider.oninput = () => {
-    trackFaders[i] = slider.value;
+    trackFaders[i] = Number(slider.value);
     updateTrackGain(i);
   };
 
@@ -144,7 +190,7 @@ tracks.forEach((track, i) => {
 
     trackSources[i]?.stop();
 
-    const offset = parseFloat(offsetInput.value) || 0;
+    const offset = Number(offsetInput.value) || 0;
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
@@ -155,7 +201,7 @@ tracks.forEach((track, i) => {
 
   stopBtn.onclick = () => trackSources[i]?.stop();
 
-  // ===== DRAG TIMELINE =====
+  // Drag clip
   let dragging = false;
   let startX = 0;
   let startLeft = 0;
@@ -184,24 +230,30 @@ tracks.forEach((track, i) => {
   });
 });
 
-// ===== PLAYHEAD =====
-let playheadRAF = null;
-let playheadStart = 0;
-
+// =====================
+// PLAYHEAD
+// =====================
 function startPlayhead() {
   stopPlayhead();
-  playheadStart = audioContext.currentTime;
+  playheadStartTime = audioContext.currentTime - loopStart;
   playheadRAF = requestAnimationFrame(updatePlayhead);
 }
 
 function stopPlayhead() {
   cancelAnimationFrame(playheadRAF);
   document.querySelectorAll(".playhead")
-    .forEach(ph => ph.style.left = "0px");
+    .forEach(p => p.style.left = "0px");
 }
 
 function updatePlayhead() {
-  const t = audioContext.currentTime - playheadStart;
+  let t = audioContext.currentTime - playheadStartTime;
+
+  if (loopEnabled && t >= loopEnd) {
+    stopAll();
+    playAll();
+    return;
+  }
+
   const x = t * 100;
 
   document.querySelectorAll(".timeline").forEach(tl => {
@@ -212,10 +264,12 @@ function updatePlayhead() {
   playheadRAF = requestAnimationFrame(updatePlayhead);
 }
 
-// ===== TRANSPORT =====
-playAllBtn.onclick = async () => {
+// =====================
+// TRANSPORT
+// =====================
+function playAll() {
   initAudio();
-  if (audioContext.state !== "running") await audioContext.resume();
+  if (audioContext.state !== "running") audioContext.resume();
 
   const base = audioContext.currentTime + 0.05;
 
@@ -225,7 +279,7 @@ playAllBtn.onclick = async () => {
     trackSources[i]?.stop();
 
     const offset =
-      parseFloat(track.querySelector(".track-offset").value) || 0;
+      Number(track.querySelector(".track-offset").value) || 0;
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
@@ -236,9 +290,12 @@ playAllBtn.onclick = async () => {
   });
 
   startPlayhead();
-};
+}
 
-stopAllBtn.onclick = () => {
+function stopAll() {
   trackSources.forEach(s => s?.stop());
   stopPlayhead();
-};
+}
+
+playAllBtn.onclick = playAll;
+stopAllBtn.onclick = stopAll;
