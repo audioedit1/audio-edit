@@ -167,6 +167,19 @@ function updateTrackGain(i) {
   if (anySolo && !trackSolo[i]) gain = 0;
 
   trackGains[i].gain.value = gain;
+
+  // Visual dimming
+  tracks[i].style.opacity =
+    anySolo && !trackSolo[i] ? "0.4" : "1";
+}
+
+  const anySolo = trackSolo.some(v => v);
+  let gain = trackFaders[i];
+
+  if (trackMuted[i]) gain = 0;
+  if (anySolo && !trackSolo[i]) gain = 0;
+
+  trackGains[i].gain.value = gain;
 }
 
 // =====================
@@ -195,14 +208,24 @@ tracks.forEach((track, i) => {
   };
 
   muteBtn.onclick = () => {
-    trackMuted[i] = !trackMuted[i];
-    for (let t = 0; t < 3; t++) updateTrackGain(t);
-  };
+  trackMuted[i] = !trackMuted[i];
+
+  muteBtn.classList.toggle("active", trackMuted[i]);
+  muteBtn.textContent = trackMuted[i] ? "Muted" : "Mute";
+
+  for (let t = 0; t < 3; t++) updateTrackGain(t);
+};
+
 
   soloBtn.onclick = () => {
-    trackSolo[i] = !trackSolo[i];
-    for (let t = 0; t < 3; t++) updateTrackGain(t);
-  };
+  trackSolo[i] = !trackSolo[i];
+
+  soloBtn.classList.toggle("active", trackSolo[i]);
+  soloBtn.textContent = trackSolo[i] ? "Soloed" : "Solo";
+
+  for (let t = 0; t < 3; t++) updateTrackGain(t);
+};
+
 
   track.onclick = (e) => {
     if (!selectedLibraryItem) return;
