@@ -117,3 +117,10 @@ header {
   background: red;
   pointer-events: none;
 }
+
+.loop-controls {
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
