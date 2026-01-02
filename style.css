@@ -1,3 +1,7 @@
+/* =====================
+   GLOBAL
+===================== */
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
@@ -11,51 +15,30 @@ header {
   border-bottom: 1px solid #222;
 }
 
-.editor-placeholder {
-  margin: 60px auto;
+/* =====================
+   MASTER / TRANSPORT
+===================== */
+
+.master,
+.transport {
   width: 80%;
-  height: 300px;
-  border: 2px dashed #444;
+  margin: 20px auto;
+}
+
+.transport button {
+  margin-right: 8px;
+}
+
+.loop-controls {
+  margin-top: 8px;
   display: flex;
+  gap: 12px;
   align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #666;
-}
-.upload-section {
-  width: 80%;
-  margin: 40px auto;
-  padding: 20px;
-  border-top: 1px solid #222;
 }
 
-.upload-section h2 {
-  margin-bottom: 10px;
-}
-
-#fileList {
-  list-style: none;
-  padding: 0;
-}
-
-#fileList li {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  border-bottom: 1px solid #222;
-  font-size: 14px;
-}
-
-.download-btn {
-  cursor: pointer;
-  color: #4ea1ff;
-}
-
-.download-btn {
-  margin-left: 12px;
-  cursor: pointer;
-  color: #4ea1ff;
-}
+/* =====================
+   EDITOR / TRACKS
+===================== */
 
 .editor {
   width: 80%;
@@ -67,34 +50,32 @@ header {
   padding: 16px;
   margin-bottom: 10px;
   cursor: pointer;
-  color: #777;
 }
 
-.track.filled {
-  color: #fff;
-  border-color: #4ea1ff;
+.track-label {
+  display: inline-block;
+  min-width: 160px;
 }
 
-#fileList li.selected {
-  background: #1a1a1a;
-  border-left: 3px solid #4ea1ff;
+.track-gain {
+  width: 120px;
+  margin: 0 8px;
 }
 
-#fileList li.selected {
-  outline: 1px solid #4da3ff;
-}
-
-/* ===== TIMELINE ===== */
+/* =====================
+   TIMELINE
+===================== */
 
 .timeline {
   position: relative;
   height: 24px;
   background: #1a1a1a;
   border: 1px solid #333;
-  margin: 6px 0;
+  margin: 8px 0;
   overflow: hidden;
 }
 
+/* Clip (visual only, not interactive for now) */
 .clip {
   position: absolute;
   left: 0;
@@ -103,10 +84,12 @@ header {
   width: 80px;
   background: #3b82f6;
   border-radius: 3px;
-  cursor: grab;
+  pointer-events: none; /* IMPORTANT: allow loop handle drag */
 }
 
-/* ===== PLAYHEAD ===== */
+/* =====================
+   PLAYHEAD
+===================== */
 
 .playhead {
   position: absolute;
@@ -116,13 +99,67 @@ header {
   height: 100%;
   background: red;
   pointer-events: none;
+  z-index: 4;
 }
 
-.loop-controls {
-  margin-top: 8px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
+/* =====================
+   LOOP REGION
+===================== */
+
+.loop-region {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(77, 163, 255, 0.25);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* =====================
+   LOOP HANDLES
+===================== */
+
+.loop-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.loop-handle.loop-start {
+  background: #00c853;
+}
+
+.loop-handle.loop-end {
+  background: #ff5252;
+}
+
+/* =====================
+   MUTE / SOLO STATES
+===================== */
+
+.track-mute.active {
+  background: #b00020;
+  color: white;
+}
+
+.track-solo.active {
+  background: #f0c000;
+  color: black;
+}
+
+/* =====================
+   LIBRARY
+===================== */
+
+.upload-section {
+  width: 80%;
+  margin: 40px auto;
+  padding-top: 20px;
+  border-top: 1px solid #222;
 }
 
 #fileList {
@@ -143,40 +180,4 @@ header {
 
 #fileList li.selected {
   outline: 2px solid #4da3ff;
-}
-
-.loop-region {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  background: rgba(77, 163, 255, 0.25);
-  pointer-events: none;
-}
-
-.track-mute.active {
-  background: #b00020;
-  color: white;
-}
-
-.track-solo.active {
-  background: #f0c000;
-  color: black;
-}
-
-.loop-handle {
-  position: absolute;
-  top: 0;
-  width: 6px;
-  height: 100%;
-  background: #4da3ff;
-  cursor: ew-resize;
-  z-index: 3;
-}
-
-.loop-handle.loop-start {
-  background: #00c853;
-}
-
-.loop-handle.loop-end {
-  background: #ff5252;
 }
