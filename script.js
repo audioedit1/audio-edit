@@ -248,7 +248,7 @@ function stopPlayhead() {
 function updatePlayhead() {
   let t = audioContext.currentTime - playheadStartTime;
 
-  if (loopEnabled && t >= loopEnd) {
+  if (loopEnabled && loopEnd > loopStart && t >= loopEnd) {
     stopAll();
     playAll();
     return;
@@ -271,26 +271,41 @@ function playAll() {
   initAudio();
   if (audioContext.state !== "running") audioContext.resume();
 
-  const base = audioContext.currentTime + 0.05;
+  const baseTime = audioContext.currentTime + 0.05;
 
   tracks.forEach((track, i) => {
     if (!trackBuffers[i]) return;
 
+    // stop previous source
     trackSources[i]?.stop();
 
-    const offset =
+    const trackOffset =
       Number(track.querySelector(".track-offset").value) || 0;
+
+    // respect loop start
+    const startAt = loopEnabled
+      ? Math.max(trackOffset, loopStart)
+      : trackOffset;
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-    src.start(base + offset);
+
+    // align playback to loop A
+    src.start(
+      baseTime + (startAt - (loopEnabled ? loopStart : 0))
+    );
 
     trackSources[i] = src;
   });
 
+  // align playhead with loop
+  playheadStartTime =
+    audioContext.currentTime - (loopEnabled ? loopStart : 0);
+
   startPlayhead();
 }
+
 
 function stopAll() {
   trackSources.forEach(s => s?.stop());
