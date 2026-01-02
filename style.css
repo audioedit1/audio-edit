@@ -93,3 +93,15 @@ header {
 #fileList li.selected {
   outline: 2px solid #4da3ff;
 }
+
+.clip {
+  pointer-events: auto;
+}
+
+.timeline {
+  pointer-events: auto;
+}
+
+* {
+  user-select: none;
+}
