@@ -73,12 +73,9 @@ function updateLoopOverlay() {
       return;
     }
 
-    const left = loopStart * 100;
-    const width = (loopEnd - loopStart) * 100;
-
     loopEl.style.display = "block";
-    loopEl.style.left = left + "px";
-    loopEl.style.width = width + "px";
+    loopEl.style.left = (loopStart * 100) + "px";
+    loopEl.style.width = ((loopEnd - loopStart) * 100) + "px";
   });
 }
 
@@ -168,18 +165,8 @@ function updateTrackGain(i) {
 
   trackGains[i].gain.value = gain;
 
-  // Visual dimming
   tracks[i].style.opacity =
     anySolo && !trackSolo[i] ? "0.4" : "1";
-}
-
-  const anySolo = trackSolo.some(v => v);
-  let gain = trackFaders[i];
-
-  if (trackMuted[i]) gain = 0;
-  if (anySolo && !trackSolo[i]) gain = 0;
-
-  trackGains[i].gain.value = gain;
 }
 
 // =====================
@@ -193,7 +180,6 @@ tracks.forEach((track, i) => {
   const muteBtn = track.querySelector(".track-mute");
   const soloBtn = track.querySelector(".track-solo");
   const offsetInput = track.querySelector(".track-offset");
-
   const timeline = track.querySelector(".timeline");
   const clip = track.querySelector(".clip");
 
@@ -208,24 +194,18 @@ tracks.forEach((track, i) => {
   };
 
   muteBtn.onclick = () => {
-  trackMuted[i] = !trackMuted[i];
-
-  muteBtn.classList.toggle("active", trackMuted[i]);
-  muteBtn.textContent = trackMuted[i] ? "Muted" : "Mute";
-
-  for (let t = 0; t < 3; t++) updateTrackGain(t);
-};
-
+    trackMuted[i] = !trackMuted[i];
+    muteBtn.classList.toggle("active", trackMuted[i]);
+    muteBtn.textContent = trackMuted[i] ? "Muted" : "Mute";
+    for (let t = 0; t < 3; t++) updateTrackGain(t);
+  };
 
   soloBtn.onclick = () => {
-  trackSolo[i] = !trackSolo[i];
-
-  soloBtn.classList.toggle("active", trackSolo[i]);
-  soloBtn.textContent = trackSolo[i] ? "Soloed" : "Solo";
-
-  for (let t = 0; t < 3; t++) updateTrackGain(t);
-};
-
+    trackSolo[i] = !trackSolo[i];
+    soloBtn.classList.toggle("active", trackSolo[i]);
+    soloBtn.textContent = trackSolo[i] ? "Soloed" : "Solo";
+    for (let t = 0; t < 3; t++) updateTrackGain(t);
+  };
 
   track.onclick = (e) => {
     if (!selectedLibraryItem) return;
@@ -286,7 +266,8 @@ tracks.forEach((track, i) => {
 // =====================
 function startPlayhead() {
   stopPlayhead();
-  playheadStartTime = audioContext.currentTime - (loopEnabled ? loopStart : 0);
+  playheadStartTime =
+    audioContext.currentTime - (loopEnabled ? loopStart : 0);
   playheadRAF = requestAnimationFrame(updatePlayhead);
 }
 
@@ -297,7 +278,7 @@ function stopPlayhead() {
 }
 
 function updatePlayhead() {
-  let t = audioContext.currentTime - playheadStartTime;
+  const t = audioContext.currentTime - playheadStartTime;
 
   if (loopEnabled && loopEnd > loopStart && t >= loopEnd) {
     stopAll();
@@ -306,10 +287,9 @@ function updatePlayhead() {
   }
 
   const x = t * 100;
-
   document.querySelectorAll(".timeline").forEach(tl => {
-    const ph = tl.querySelector(".playhead");
-    ph.style.left = Math.min(x, tl.clientWidth) + "px";
+    tl.querySelector(".playhead").style.left =
+      Math.min(x, tl.clientWidth) + "px";
   });
 
   playheadRAF = requestAnimationFrame(updatePlayhead);
