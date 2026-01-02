@@ -32,6 +32,7 @@ const trackSolo = [false, false, false];
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = 4;
+let draggingLoop = null; // "start" | "end" | null
 
 // Playhead
 let playheadRAF = null;
@@ -66,18 +67,33 @@ masterSlider.oninput = () => {
 function updateLoopOverlay() {
   document.querySelectorAll(".timeline").forEach(timeline => {
     const loopEl = timeline.querySelector(".loop-region");
-    if (!loopEl) return;
+    const startHandle = timeline.querySelector(".loop-start");
+    const endHandle = timeline.querySelector(".loop-end");
+
+    if (!loopEl || !startHandle || !endHandle) return;
 
     if (!loopEnabled || loopEnd <= loopStart) {
       loopEl.style.display = "none";
+      startHandle.style.display = "none";
+      endHandle.style.display = "none";
       return;
     }
 
+    const left = loopStart * 100;
+    const width = (loopEnd - loopStart) * 100;
+
     loopEl.style.display = "block";
-    loopEl.style.left = (loopStart * 100) + "px";
-    loopEl.style.width = ((loopEnd - loopStart) * 100) + "px";
+    loopEl.style.left = left + "px";
+    loopEl.style.width = width + "px";
+
+    startHandle.style.display = "block";
+    endHandle.style.display = "block";
+
+    startHandle.style.left = left + "px";
+    endHandle.style.left = (left + width) + "px";
   });
 }
+
 
 // =====================
 // LOOP CONTROLS
@@ -345,6 +361,40 @@ function stopAll() {
 
 playAllBtn.onclick = playAll;
 stopAllBtn.onclick = stopAll;
+
+document.addEventListener("mousedown", (e) => {
+  if (e.target.classList.contains("loop-start")) {
+    draggingLoop = "start";
+  } else if (e.target.classList.contains("loop-end")) {
+    draggingLoop = "end";
+  }
+});
+
+document.addEventListener("mousemove", (e) => {
+  if (!draggingLoop) return;
+
+  const timeline = document.querySelector(".timeline");
+  const rect = timeline.getBoundingClientRect();
+  const x = Math.max(0, e.clientX - rect.left);
+  const seconds = +(x / 100).toFixed(2);
+
+  if (draggingLoop === "start") {
+    loopStart = Math.min(seconds, loopEnd - 0.1);
+    loopStartInput.value = loopStart;
+  }
+
+  if (draggingLoop === "end") {
+    loopEnd = Math.max(seconds, loopStart + 0.1);
+    loopEndInput.value = loopEnd;
+  }
+
+  updateLoopOverlay();
+});
+
+document.addEventListener("mouseup", () => {
+  draggingLoop = null;
+});
+
 
 // Initial draw
 updateLoopOverlay();

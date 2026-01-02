@@ -162,3 +162,21 @@ header {
   background: #f0c000;
   color: black;
 }
+
+.loop-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: #4da3ff;
+  cursor: ew-resize;
+  z-index: 3;
+}
+
+.loop-handle.loop-start {
+  background: #00c853;
+}
+
+.loop-handle.loop-end {
+  background: #ff5252;
+}
