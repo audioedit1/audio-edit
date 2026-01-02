@@ -312,15 +312,24 @@ function playAll() {
     const trackOffset =
       Number(track.querySelector(".track-offset").value) || 0;
 
-    const startAt = loopEnabled
-      ? Math.max(trackOffset, loopStart)
-      : trackOffset;
+    let startTimeOnTimeline = trackOffset;
+    let bufferOffset = 0;
+
+    if (loopEnabled) {
+      // Timeline starts at Loop A
+      startTimeOnTimeline = Math.max(trackOffset, loopStart);
+
+      // Where to read inside the audio buffer
+      bufferOffset = Math.max(0, loopStart - trackOffset);
+    }
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
+
     src.start(
-      baseTime + (startAt - (loopEnabled ? loopStart : 0))
+      baseTime + (startTimeOnTimeline - (loopEnabled ? loopStart : 0)),
+      bufferOffset
     );
 
     trackSources[i] = src;
