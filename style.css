@@ -83,3 +83,25 @@ header {
 #fileList li.selected {
   outline: 1px solid #4da3ff;
 }
+
+/* ===== TIMELINE ===== */
+
+.timeline {
+  position: relative;
+  height: 24px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  margin: 6px 0;
+  overflow: hidden;
+}
+
+.clip {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  height: 18px;
+  width: 80px;
+  background: #3b82f6;
+  border-radius: 3px;
+  cursor: grab;
+}

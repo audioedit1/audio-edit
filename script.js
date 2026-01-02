@@ -1,3 +1,4 @@
+// ===== GLOBAL STATE =====
 const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
@@ -17,7 +18,7 @@ const trackFaders = [1, 1, 1];
 const trackMuted = [false, false, false];
 const trackSolo = [false, false, false];
 
-// ---------- INIT ----------
+// ===== AUDIO INIT =====
 function initAudio() {
   if (audioContext) return;
 
@@ -32,12 +33,12 @@ function initAudio() {
   previewGain.connect(masterGain);
 }
 
-// ---------- MASTER ----------
+// ===== MASTER =====
 masterSlider.oninput = () => {
   if (masterGain) masterGain.gain.value = masterSlider.value;
 };
 
-// ---------- FILE UPLOAD ----------
+// ===== FILE UPLOAD =====
 fileInput.addEventListener("change", async () => {
   initAudio();
   for (const file of fileInput.files) {
@@ -46,7 +47,7 @@ fileInput.addEventListener("change", async () => {
   fileInput.value = "";
 });
 
-// ---------- LIBRARY ----------
+// ===== LIBRARY =====
 async function addToLibrary(file) {
   const buffer = await audioContext.decodeAudioData(
     await file.arrayBuffer()
@@ -69,7 +70,6 @@ async function addToLibrary(file) {
     if (audioContext.state !== "running") await audioContext.resume();
 
     if (previewSource) previewSource.stop();
-
     previewSource = audioContext.createBufferSource();
     previewSource.buffer = buffer;
     previewSource.connect(previewGain);
@@ -82,8 +82,7 @@ async function addToLibrary(file) {
   };
 
   li.onclick = () => {
-    document
-      .querySelectorAll("#fileList li")
+    document.querySelectorAll("#fileList li")
       .forEach(el => el.classList.remove("selected"));
 
     li.classList.add("selected");
@@ -94,7 +93,7 @@ async function addToLibrary(file) {
   fileList.appendChild(li);
 }
 
-// ---------- GAIN LOGIC ----------
+// ===== GAIN LOGIC =====
 function updateTrackGain(i) {
   const anySolo = trackSolo.some(v => v);
   let gain = trackFaders[i];
@@ -105,26 +104,33 @@ function updateTrackGain(i) {
   trackGains[i].gain.value = gain;
 }
 
-// ---------- TRACKS ----------
+// ===== TRACKS =====
 tracks.forEach((track, i) => {
   const label = track.querySelector(".track-label");
-  const play = track.querySelector(".track-play");
-  const stop = track.querySelector(".track-stop");
+  const playBtn = track.querySelector(".track-play");
+  const stopBtn = track.querySelector(".track-stop");
   const slider = track.querySelector(".track-gain");
   const muteBtn = track.querySelector(".track-mute");
   const soloBtn = track.querySelector(".track-solo");
+  const offsetInput = track.querySelector(".track-offset");
+
+  const timeline = track.querySelector(".timeline");
+  const clip = track.querySelector(".clip");
 
   initAudio();
 
+  // Gain node
   trackGains[i] = audioContext.createGain();
   trackGains[i].gain.value = slider.value;
   trackGains[i].connect(masterGain);
 
+  // Fader
   slider.oninput = () => {
     trackFaders[i] = Number(slider.value);
     updateTrackGain(i);
   };
 
+  // Mute / Solo
   muteBtn.onclick = () => {
     trackMuted[i] = !trackMuted[i];
     muteBtn.textContent = trackMuted[i] ? "Muted" : "Mute";
@@ -137,44 +143,76 @@ tracks.forEach((track, i) => {
     for (let t = 0; t < 3; t++) updateTrackGain(t);
   };
 
+  // Assign buffer
   track.onclick = (e) => {
-    if (["BUTTON", "INPUT", "LABEL"].includes(e.target.tagName)) return;
+    if (["BUTTON", "INPUT", "LABEL", "DIV"].includes(e.target.tagName)) return;
     if (!selectedLibraryItem) return;
 
     trackBuffers[i] = selectedLibraryItem.buffer;
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
   };
 
-  // ▶ Track Play (preview, respects offset)
-  play.onclick = async () => {
+  // Track play (preview with offset)
+  playBtn.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
 
-    if (trackSources[i]) {
-      trackSources[i].stop();
-      trackSources[i] = null;
-    }
+    if (trackSources[i]) trackSources[i].stop();
 
-    const offsetValue =
-      parseFloat(track.querySelector(".track-offset").value) || 0;
+    const offset =
+      parseFloat(offsetInput.value) || 0;
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-    src.start(audioContext.currentTime + offsetValue);
+    src.start(audioContext.currentTime + offset);
 
     trackSources[i] = src;
   };
 
-  stop.onclick = () => {
+  stopBtn.onclick = () => {
     if (trackSources[i]) {
       trackSources[i].stop();
       trackSources[i] = null;
     }
   };
+
+  // ===== DRAG TIMELINE =====
+  let isDragging = false;
+  let dragStartX = 0;
+  let clipStartLeft = 0;
+
+  clip.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    dragStartX = e.clientX;
+    clipStartLeft = clip.offsetLeft;
+    clip.style.cursor = "grabbing";
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - dragStartX;
+    let newLeft = clipStartLeft + dx;
+
+    newLeft = Math.max(0, newLeft);
+    newLeft = Math.min(
+      newLeft,
+      timeline.clientWidth - clip.clientWidth
+    );
+
+    clip.style.left = newLeft + "px";
+    offsetInput.value = (newLeft / 100).toFixed(2);
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (!isDragging) return;
+    isDragging = false;
+    clip.style.cursor = "grab";
+  });
 });
 
-// ---------- TRANSPORT ----------
+// ===== TRANSPORT =====
 playAllBtn.onclick = async () => {
   initAudio();
   if (audioContext.state !== "running") await audioContext.resume();
@@ -189,13 +227,13 @@ playAllBtn.onclick = async () => {
       trackSources[i] = null;
     }
 
-    const offsetValue =
+    const offset =
       parseFloat(tracks[i].querySelector(".track-offset").value) || 0;
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-    src.start(baseTime + offsetValue);
+    src.start(baseTime + offset);
 
     trackSources[i] = src;
   }
