@@ -1,5 +1,5 @@
 // =====================
-// GLOBAL STATE
+// GLOBAL ELEMENTS
 // =====================
 const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
@@ -13,6 +13,9 @@ const loopStartInput = document.getElementById("loopStart");
 const loopEndInput = document.getElementById("loopEnd");
 const loopEnabledCheckbox = document.getElementById("loopEnabled");
 
+// =====================
+// GLOBAL STATE
+// =====================
 let audioContext = null;
 let masterGain = null;
 let previewGain = null;
@@ -58,18 +61,43 @@ masterSlider.oninput = () => {
 };
 
 // =====================
+// LOOP OVERLAY
+// =====================
+function updateLoopOverlay() {
+  document.querySelectorAll(".timeline").forEach(timeline => {
+    const loopEl = timeline.querySelector(".loop-region");
+    if (!loopEl) return;
+
+    if (!loopEnabled || loopEnd <= loopStart) {
+      loopEl.style.display = "none";
+      return;
+    }
+
+    const left = loopStart * 100;
+    const width = (loopEnd - loopStart) * 100;
+
+    loopEl.style.display = "block";
+    loopEl.style.left = left + "px";
+    loopEl.style.width = width + "px";
+  });
+}
+
+// =====================
 // LOOP CONTROLS
 // =====================
 loopStartInput.oninput = () => {
   loopStart = Math.max(0, Number(loopStartInput.value));
+  updateLoopOverlay();
 };
 
 loopEndInput.oninput = () => {
   loopEnd = Math.max(loopStart, Number(loopEndInput.value));
+  updateLoopOverlay();
 };
 
 loopEnabledCheckbox.onchange = () => {
   loopEnabled = loopEnabledCheckbox.checked;
+  updateLoopOverlay();
 };
 
 // =====================
@@ -201,7 +229,7 @@ tracks.forEach((track, i) => {
 
   stopBtn.onclick = () => trackSources[i]?.stop();
 
-  // Drag clip
+  // DRAG CLIP
   let dragging = false;
   let startX = 0;
   let startLeft = 0;
@@ -235,7 +263,7 @@ tracks.forEach((track, i) => {
 // =====================
 function startPlayhead() {
   stopPlayhead();
-  playheadStartTime = audioContext.currentTime - loopStart;
+  playheadStartTime = audioContext.currentTime - (loopEnabled ? loopStart : 0);
   playheadRAF = requestAnimationFrame(updatePlayhead);
 }
 
@@ -276,13 +304,11 @@ function playAll() {
   tracks.forEach((track, i) => {
     if (!trackBuffers[i]) return;
 
-    // stop previous source
     trackSources[i]?.stop();
 
     const trackOffset =
       Number(track.querySelector(".track-offset").value) || 0;
 
-    // respect loop start
     const startAt = loopEnabled
       ? Math.max(trackOffset, loopStart)
       : trackOffset;
@@ -290,8 +316,6 @@ function playAll() {
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-
-    // align playback to loop A
     src.start(
       baseTime + (startAt - (loopEnabled ? loopStart : 0))
     );
@@ -299,13 +323,8 @@ function playAll() {
     trackSources[i] = src;
   });
 
-  // align playhead with loop
-  playheadStartTime =
-    audioContext.currentTime - (loopEnabled ? loopStart : 0);
-
   startPlayhead();
 }
-
 
 function stopAll() {
   trackSources.forEach(s => s?.stop());
@@ -314,3 +333,6 @@ function stopAll() {
 
 playAllBtn.onclick = playAll;
 stopAllBtn.onclick = stopAll;
+
+// Initial draw
+updateLoopOverlay();
