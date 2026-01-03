@@ -5,15 +5,13 @@ const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
 
+const masterSlider = document.getElementById("masterGain");
 const playAllBtn = document.getElementById("playAll");
 const stopAllBtn = document.getElementById("stopAll");
 
 const loopStartInput = document.getElementById("loopStart");
 const loopEndInput = document.getElementById("loopEnd");
 const loopEnabledCheckbox = document.getElementById("loopEnabled");
-
-// ADD THIS
-const bpmInput = document.getElementById("bpmInput");
 
 // =====================
 // GLOBAL STATE
@@ -35,24 +33,18 @@ const trackSolo = [false, false, false];
 // TRANSPORT (MUSICAL TIME)
 // =====================
 let BPM = 120;
-let beatsPerBar = 4; // 4/4 time
+let beatsPerBar = 4; // 4/4
 
-bpmInput.oninput = () => {
-  BPM = Number(bpmInput.value) || 120;
-};
-
-// Loop values are in BEATS
+// Loop values are now BEATS (not seconds)
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = 4;
-
 let draggingLoop = null;
 let draggingTimeline = null;
 
-// Playhead (transport-level)
+// Playhead
 let playheadRAF = null;
 let playheadStartTime = 0;
-
 
 // =====================
 // AUDIO INIT
@@ -296,7 +288,7 @@ const trackOffsetSeconds = beatOffset * secondsPerBeat;
     src.connect(trackGains[i]);
 
     // IMPORTANT: simple start, no loop math
-   src.start(audioContext.currentTime, trackOffsetSeconds);
+    src.start(audioContext.currentTime + trackOffset, 0);
 
     trackSources[i] = src;
   };
