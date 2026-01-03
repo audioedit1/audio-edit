@@ -78,24 +78,21 @@ function initAudio() {
 }
 
 // =====================
+// MASTER VOLUME CONTROL
+// =====================
+masterSlider.oninput = () => {
+  if (!masterGain) return;
+  masterGain.gain.value = Number(masterSlider.value);
+};
+
+// =====================
 // PLAY ALL / STOP ALL
 // =====================
 playAllBtn.onclick = async () => {
-  // FORCE context creation / resume inside user gesture
-  if (!audioContext) {
-    audioContext = new AudioContext();
-
-    masterGain = audioContext.createGain();
-    masterGain.gain.value = masterSlider.value;
-    masterGain.connect(audioContext.destination);
-
-    previewGain = audioContext.createGain();
-    previewGain.connect(masterGain);
-  }
-
+  initAudio();                  // ensure audio graph exists
   await audioContext.resume();
-  loopTimers.forEach((_, i) => stopLoopForTrack(i));
 
+  loopTimers.forEach((_, i) => stopLoopForTrack(i));
 
   tracks.forEach((track, i) => {
     if (!trackBuffers[i]) return;
@@ -124,9 +121,9 @@ playAllBtn.onclick = async () => {
     src.connect(trackGains[i]);
     src.start(startTime, trimStart, trimEnd - trimStart);
 
-trackSources[i] = src;
+    trackSources[i] = src;
 
-if (loopEnabled) startLoopForTrack(i);
+    if (loopEnabled) startLoopForTrack(i);
   });
 };
 
@@ -138,6 +135,7 @@ stopAllBtn.onclick = () => {
 };
 
 
+
 // =====================
 // LOOP (AUDIO + VISUAL)
 // =====================
@@ -146,7 +144,6 @@ stopAllBtn.onclick = () => {
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = beatsToSeconds(4);
-
 
 let draggingLoop = null;
 let draggingTimeline = null;
