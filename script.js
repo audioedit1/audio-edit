@@ -33,18 +33,20 @@ const trackSolo = [false, false, false];
 // TRANSPORT (MUSICAL TIME)
 // =====================
 let BPM = 120;
-let beatsPerBar = 4; // 4/4
+let beatsPerBar = 4; // 4/4 time
 
-// Loop values are now BEATS (not seconds)
+// Loop values are in BEATS
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = 4;
+
 let draggingLoop = null;
 let draggingTimeline = null;
 
-// Playhead
+// Playhead (transport-level)
 let playheadRAF = null;
 let playheadStartTime = 0;
+
 
 // =====================
 // AUDIO INIT
@@ -288,7 +290,7 @@ const trackOffsetSeconds = beatOffset * secondsPerBeat;
     src.connect(trackGains[i]);
 
     // IMPORTANT: simple start, no loop math
-    src.start(audioContext.currentTime + trackOffset, 0);
+   src.start(audioContext.currentTime, trackOffsetSeconds);
 
     trackSources[i] = src;
   };
