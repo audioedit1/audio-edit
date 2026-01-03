@@ -126,9 +126,8 @@ function initAudio() {
 playAllBtn.onclick = async () => {
   initAudio();
   await audioContext.resume();
-  startPlayhead();
+startPlayhead();
 
-  // stop any running loops first
   loopTimers.forEach((_, i) => stopLoopForTrack(i));
 
   tracks.forEach((track, i) => {
@@ -136,13 +135,6 @@ playAllBtn.onclick = async () => {
 
     trackSources[i]?.stop();
 
-    // 🔴 IMPORTANT: if loop is enabled, ONLY start loop
-    if (loopEnabled) {
-      startLoopForTrack(i);
-      return;
-    }
-
-    // normal (non-loop) playback
     const offsetInput = track.querySelector(".track-offset");
     const beatOffset = Number(offsetInput?.value) || 0;
 
@@ -166,6 +158,8 @@ playAllBtn.onclick = async () => {
     src.start(startTime, trimStart, trimEnd - trimStart);
 
     trackSources[i] = src;
+
+    if (loopEnabled) startLoopForTrack(i);
   });
 };
 
@@ -180,21 +174,52 @@ stopAllBtn.onclick = () => {
 };
 
 // =====================
-// LOOP (AUDIO + VISUAL)
+// LOOP STATE (GLOBAL)
 // =====================
 
-// Loop state (seconds)
+// loop in seconds (audio time)
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = beatsToSeconds(4);
 
+// per-track scheduling
+const loopTimers = [null, null, null];
+const loopPlayTimes = [0, 0, 0];
+
+// UI drag state
 let draggingLoop = null;
 let draggingTimeline = null;
 
-// Per-track loop timers
-const loopTimers = [null, null, null];
+// =====================
+// LOOP CONTROLS (INPUTS)
+// =====================
 
-// ---------- VISUAL OVERLAY ----------
+loopStartInput.oninput = () => {
+  loopStart = beatsToSeconds(Number(loopStartInput.value) || 0);
+  updateLoopOverlay();
+};
+
+loopEndInput.oninput = () => {
+  loopEnd = beatsToSeconds(Number(loopEndInput.value) || 0);
+  updateLoopOverlay();
+};
+
+loopEnabledCheckbox.onchange = () => {
+  loopEnabled = loopEnabledCheckbox.checked;
+
+  if (!loopEnabled) {
+    // hard reset all loop state
+    loopPlayTimes.fill(0);
+    loopTimers.forEach((_, i) => stopLoopForTrack(i));
+  }
+
+  updateLoopOverlay();
+};
+
+// =====================
+// LOOP VISUAL OVERLAY
+// =====================
+
 function updateLoopOverlay() {
   document.querySelectorAll(".timeline").forEach(timeline => {
     const loopEl = timeline.querySelector(".loop-region");
@@ -228,55 +253,98 @@ function updateLoopOverlay() {
   });
 }
 
-// ---------- LOOP CONTROLS ----------
-loopStartInput.oninput = () => {
-  loopStart = beatsToSeconds(Number(loopStartInput.value) || 0);
-  updateLoopOverlay();
-};
+// =====================
+// AUDIO LOOP ENGINE
+// =====================
 
-loopEndInput.oninput = () => {
-  loopEnd = beatsToSeconds(Number(loopEndInput.value) || 0);
-  updateLoopOverlay();
-};
-
-loopEnabledCheckbox.onchange = () => {
-  loopEnabled = loopEnabledCheckbox.checked;
-  updateLoopOverlay();
-};
-
-// ---------- AUDIO LOOP ENGINE ----------
 function startLoopForTrack(i) {
   if (!loopEnabled) return;
   if (!trackBuffers[i]) return;
-
-  clearTimeout(loopTimers[i]);
+  if (!audioContext) return;
 
   const duration = Math.max(0.01, loopEnd - loopStart);
 
-  loopTimers[i] = setTimeout(() => {
-    if (!loopEnabled) return;
+  // initialize loop timeline once
+  if (!loopPlayTimes[i]) {
+    loopPlayTimes[i] = audioContext.currentTime;
+  }
 
-    trackSources[i]?.stop();
+  const startAt = loopPlayTimes[i];
 
-    const src = audioContext.createBufferSource();
-    src.buffer = trackBuffers[i];
-    src.connect(trackGains[i]);
+  const src = audioContext.createBufferSource();
+  src.buffer = trackBuffers[i];
+  src.connect(trackGains[i]);
 
-    const now = audioContext.currentTime;
-    src.start(now, loopStart, duration);
-    src.stop(now + duration);   // ← HARD STOP (CRITICAL)
+  // schedule loop segment precisely
+  src.start(startAt, loopStart, duration);
+  src.stop(startAt + duration);
 
-    trackSources[i] = src;
+  trackSources[i] = src;
 
-    startLoopForTrack(i);
-  }, duration * 1000);
+  // advance audio timeline
+  loopPlayTimes[i] += duration;
+
+  // schedule next iteration slightly early
+  loopTimers[i] = setTimeout(
+    () => startLoopForTrack(i),
+    Math.max(
+      0,
+      (loopPlayTimes[i] - audioContext.currentTime - 0.05) * 1000
+    )
+  );
 }
 
 function stopLoopForTrack(i) {
-  trackSources[i]?.stop();     // ← stop current audio immediately
+  trackSources[i]?.stop();
   clearTimeout(loopTimers[i]);
   loopTimers[i] = null;
+  loopPlayTimes[i] = 0;
 }
+
+// =====================
+// LOOP HANDLE DRAGGING
+// =====================
+
+document.addEventListener("mousedown", e => {
+  if (e.target.classList.contains("loop-start")) {
+    draggingLoop = "start";
+    draggingTimeline = e.target.closest(".timeline");
+  } else if (e.target.classList.contains("loop-end")) {
+    draggingLoop = "end";
+    draggingTimeline = e.target.closest(".timeline");
+  }
+});
+
+document.addEventListener("mousemove", e => {
+  if (!draggingLoop || !draggingTimeline) return;
+
+  const rect = draggingTimeline.getBoundingClientRect();
+  const x = Math.max(0, e.clientX - rect.left);
+
+  const seconds =
+    (x / draggingTimeline.clientWidth) * beatsToSeconds(8);
+
+  if (draggingLoop === "start") {
+    loopStart = Math.min(seconds, loopEnd - 0.01);
+    loopStartInput.value = secondsToBeats(loopStart).toFixed(2);
+  } else if (draggingLoop === "end") {
+    loopEnd = Math.max(seconds, loopStart + 0.01);
+    loopEndInput.value = secondsToBeats(loopEnd).toFixed(2);
+  }
+
+  updateLoopOverlay();
+});
+
+document.addEventListener("mouseup", () => {
+  draggingLoop = null;
+  draggingTimeline = null;
+});
+
+// =====================
+// INITIAL DRAW
+// =====================
+
+updateLoopOverlay();
 
 // =====================
 // FILE UPLOAD
