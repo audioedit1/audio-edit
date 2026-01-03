@@ -62,6 +62,22 @@ function secondsToBeats(seconds) {
 }
 
 // =====================
+// AUDIO INIT
+// =====================
+function initAudio() {
+  if (audioContext) return;
+
+  audioContext = new AudioContext();
+
+  masterGain = audioContext.createGain();
+  masterGain.gain.value = masterSlider.value;
+  masterGain.connect(audioContext.destination);
+
+  previewGain = audioContext.createGain();
+  previewGain.connect(masterGain);
+}
+
+// =====================
 // PLAY ALL / STOP ALL
 // =====================
 playAllBtn.onclick = async () => {
@@ -78,6 +94,8 @@ playAllBtn.onclick = async () => {
   }
 
   await audioContext.resume();
+  loopTimers.forEach((_, i) => stopLoopForTrack(i));
+
 
   tracks.forEach((track, i) => {
     if (!trackBuffers[i]) return;
@@ -106,49 +124,37 @@ playAllBtn.onclick = async () => {
     src.connect(trackGains[i]);
     src.start(startTime, trimStart, trimEnd - trimStart);
 
-    trackSources[i] = src;
+trackSources[i] = src;
+
+if (loopEnabled) startLoopForTrack(i);
   });
 };
 
 stopAllBtn.onclick = () => {
-  trackSources.forEach(src => src?.stop());
+  trackSources.forEach((src, i) => {
+    src?.stop();
+    stopLoopForTrack(i);
+  });
 };
 
+
 // =====================
-// LOOP STATE
+// LOOP (AUDIO + VISUAL)
 // =====================
+
+// Loop state (seconds)
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = beatsToSeconds(4);
+
+
 let draggingLoop = null;
 let draggingTimeline = null;
 
-// =====================
-// AUDIO INIT
-// =====================
-function initAudio() {
-  if (audioContext) return;
+// Per-track loop timers
+const loopTimers = [null, null, null];
 
-  audioContext = new AudioContext();
-
-  masterGain = audioContext.createGain();
-  masterGain.gain.value = masterSlider.value;
-  masterGain.connect(audioContext.destination);
-
-  previewGain = audioContext.createGain();
-  previewGain.connect(masterGain);
-}
-
-// =====================
-// MASTER
-// =====================
-masterSlider.oninput = () => {
-  if (masterGain) masterGain.gain.value = masterSlider.value;
-};
-
-// =====================
-// LOOP OVERLAY
-// =====================
+// ---------- VISUAL OVERLAY ----------
 function updateLoopOverlay() {
   document.querySelectorAll(".timeline").forEach(timeline => {
     const loopEl = timeline.querySelector(".loop-region");
@@ -182,9 +188,7 @@ function updateLoopOverlay() {
   });
 }
 
-// =====================
-// LOOP CONTROLS
-// =====================
+// ---------- LOOP CONTROLS ----------
 loopStartInput.oninput = () => {
   loopStart = beatsToSeconds(Number(loopStartInput.value) || 0);
   updateLoopOverlay();
@@ -199,6 +203,37 @@ loopEnabledCheckbox.onchange = () => {
   loopEnabled = loopEnabledCheckbox.checked;
   updateLoopOverlay();
 };
+
+// ---------- AUDIO LOOP ENGINE ----------
+function startLoopForTrack(i) {
+  if (!loopEnabled) return;
+  if (!trackBuffers[i]) return;
+
+  clearTimeout(loopTimers[i]);
+
+  const duration = Math.max(0.01, loopEnd - loopStart);
+
+  loopTimers[i] = setTimeout(() => {
+    if (!loopEnabled) return;
+
+    trackSources[i]?.stop();
+
+    const src = audioContext.createBufferSource();
+    src.buffer = trackBuffers[i];
+    src.connect(trackGains[i]);
+    src.start(audioContext.currentTime, loopStart, duration);
+
+    trackSources[i] = src;
+
+    startLoopForTrack(i);
+  }, duration * 1000);
+}
+
+function stopLoopForTrack(i) {
+  clearTimeout(loopTimers[i]);
+  loopTimers[i] = null;
+}
+
 
 // =====================
 // FILE UPLOAD
@@ -348,12 +383,14 @@ tracks.forEach((track, i) => {
     src.connect(trackGains[i]);
     src.start(startTime, trimStart, trimEnd - trimStart);
 
-    trackSources[i] = src;
+trackSources[i] = src;
+
+if (loopEnabled) startLoopForTrack(i);
   };
 
   stopBtn.onclick = () => {
-    trackSources[i]?.stop();
-  };
+  trackSources[i]?.stop();
+};
 
   track.onclick = e => {
     if (!selectedLibraryItem) return;
