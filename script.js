@@ -5,13 +5,15 @@ const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
 const tracks = document.querySelectorAll(".track");
 
-const masterSlider = document.getElementById("masterGain");
 const playAllBtn = document.getElementById("playAll");
 const stopAllBtn = document.getElementById("stopAll");
 
 const loopStartInput = document.getElementById("loopStart");
 const loopEndInput = document.getElementById("loopEnd");
 const loopEnabledCheckbox = document.getElementById("loopEnabled");
+
+// ADD THIS
+const bpmInput = document.getElementById("bpmInput");
 
 // =====================
 // GLOBAL STATE
@@ -34,6 +36,10 @@ const trackSolo = [false, false, false];
 // =====================
 let BPM = 120;
 let beatsPerBar = 4; // 4/4 time
+
+bpmInput.oninput = () => {
+  BPM = Number(bpmInput.value) || 120;
+};
 
 // Loop values are in BEATS
 let loopEnabled = false;

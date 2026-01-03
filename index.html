@@ -31,26 +31,32 @@
 
   <!-- TRANSPORT -->
   <section class="transport">
-    <button id="playAll">Play</button>
-    <button id="stopAll">Stop</button>
+  <button id="playAll">Play</button>
+  <button id="stopAll">Stop</button>
 
-    <div class="loop-controls">
-      <label>
-        Loop A (s)
-        <input type="number" id="loopStart" min="0" step="0.1" value="0">
-      </label>
+  <!-- ADD THIS -->
+  <label>
+    BPM
+    <input type="number" id="bpmInput" value="120" min="40" max="240">
+  </label>
 
-      <label>
-        Loop B (s)
-        <input type="number" id="loopEnd" min="0" step="0.1" value="4">
-      </label>
+  <div class="loop-controls">
+    <label>
+      Loop A (s)
+      <input type="number" id="loopStart" min="0" step="0.1" value="0">
+    </label>
 
-      <label>
-        <input type="checkbox" id="loopEnabled">
-        Loop
-      </label>
-    </div>
-  </section>
+    <label>
+      Loop B (s)
+      <input type="number" id="loopEnd" min="0" step="0.1" value="4">
+    </label>
+
+    <label>
+      <input type="checkbox" id="loopEnabled">
+      Loop
+    </label>
+  </div>
+</section>
 
   <!-- TRACKS --> 
   <main>
