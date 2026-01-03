@@ -49,7 +49,7 @@ function updateTrackGains() {
 }
 
 // =====================
-// TRANSPORT
+// TRANSPORT / TIME
 // =====================
 let BPM = 120;
 
@@ -60,6 +60,48 @@ function beatsToSeconds(beats) {
 function secondsToBeats(seconds) {
   return seconds / (60 / BPM);
 }
+
+// =====================
+// PLAY ALL / STOP ALL
+// =====================
+playAllBtn.onclick = async () => {
+  initAudio();
+  if (audioContext.state !== "running") await audioContext.resume();
+
+  tracks.forEach((track, i) => {
+    if (!trackBuffers[i]) return;
+
+    trackSources[i]?.stop();
+
+    const offsetInput = track.querySelector(".track-offset");
+    const beatOffset = Number(offsetInput?.value) || 0;
+
+    const startTime =
+      audioContext.currentTime + beatsToSeconds(beatOffset);
+
+    const bufferDuration = trackBuffers[i].duration;
+
+    const trimStart = Math.max(0, trackTrimStart[i] || 0);
+    const rawTrimEnd =
+      trackTrimEnd[i] > 0 ? trackTrimEnd[i] : bufferDuration;
+
+    const trimEnd = Math.max(
+      trimStart + 0.01,
+      Math.min(rawTrimEnd, bufferDuration)
+    );
+
+    const src = audioContext.createBufferSource();
+    src.buffer = trackBuffers[i];
+    src.connect(trackGains[i]);
+    src.start(startTime, trimStart, trimEnd - trimStart);
+
+    trackSources[i] = src;
+  });
+};
+
+stopAllBtn.onclick = () => {
+  trackSources.forEach(src => src?.stop());
+};
 
 // =====================
 // LOOP STATE
@@ -221,6 +263,21 @@ tracks.forEach((track, i) => {
   trackGains[i] = audioContext.createGain();
   trackGains[i].connect(masterGain);
 
+  function updateClipVisual() {
+    if (!trackBuffers[i]) return;
+
+    const duration = trackBuffers[i].duration;
+    const totalSeconds = beatsToSeconds(8);
+    const pxPerSecond = timeline.clientWidth / totalSeconds;
+
+    const trimStart = trackTrimStart[i] || 0;
+    const trimEnd =
+      trackTrimEnd[i] > 0 ? trackTrimEnd[i] : duration;
+
+    const visibleDuration = Math.max(0.01, trimEnd - trimStart);
+    clip.style.width = visibleDuration * pxPerSecond + "px";
+  }
+
   slider.oninput = () => {
     trackFaders[i] = Number(slider.value);
     updateTrackGains();
@@ -243,12 +300,14 @@ tracks.forEach((track, i) => {
   if (trimStartInput) {
     trimStartInput.oninput = () => {
       trackTrimStart[i] = Math.max(0, Number(trimStartInput.value) || 0);
+      updateClipVisual();
     };
   }
 
   if (trimEndInput) {
     trimEndInput.oninput = () => {
       trackTrimEnd[i] = Math.max(0, Number(trimEndInput.value) || 0);
+      updateClipVisual();
     };
   }
 
@@ -290,6 +349,7 @@ tracks.forEach((track, i) => {
     if (["BUTTON", "INPUT", "DIV"].includes(e.target.tagName)) return;
     trackBuffers[i] = selectedLibraryItem.buffer;
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
+    updateClipVisual();
   };
 
   let dragging = false;
