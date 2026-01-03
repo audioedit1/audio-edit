@@ -65,8 +65,19 @@ function secondsToBeats(seconds) {
 // PLAY ALL / STOP ALL
 // =====================
 playAllBtn.onclick = async () => {
-  initAudio();
-  if (audioContext.state !== "running") await audioContext.resume();
+  // FORCE context creation / resume inside user gesture
+  if (!audioContext) {
+    audioContext = new AudioContext();
+
+    masterGain = audioContext.createGain();
+    masterGain.gain.value = masterSlider.value;
+    masterGain.connect(audioContext.destination);
+
+    previewGain = audioContext.createGain();
+    previewGain.connect(masterGain);
+  }
+
+  await audioContext.resume();
 
   tracks.forEach((track, i) => {
     if (!trackBuffers[i]) return;
