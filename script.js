@@ -272,26 +272,25 @@ tracks.forEach((track, i) => {
   const stopBtn = track.querySelector(".track-stop");
   const offsetInput = track.querySelector(".track-offset");
 
-  playBtn.onclick = async () => {
-    if (!trackBuffers[i]) return;
-    if (audioContext.state !== "running") await audioContext.resume();
+ playBtn.onclick = async () => {
+  if (!trackBuffers[i]) return;
+  if (audioContext.state !== "running") await audioContext.resume();
 
-    // stop previous
-    if (trackSources[i]) trackSources[i].stop();
+  // stop previous
+  if (trackSources[i]) trackSources[i].stop();
 
-   const beatOffset = Number(offsetInput.value) || 0;
-const secondsPerBeat = 60 / BPM;
-const trackOffsetSeconds = beatOffset * secondsPerBeat;
+  const beatOffset = Number(offsetInput.value) || 0;
+  const secondsPerBeat = 60 / BPM;
+  const startTime = audioContext.currentTime + (beatOffset * secondsPerBeat);
 
-    const src = audioContext.createBufferSource();
-    src.buffer = trackBuffers[i];
-    src.connect(trackGains[i]);
+  const src = audioContext.createBufferSource();
+  src.buffer = trackBuffers[i];
+  src.connect(trackGains[i]);
 
-    // IMPORTANT: simple start, no loop math
-    src.start(audioContext.currentTime + trackOffset, 0);
+  src.start(startTime, 0);
 
-    trackSources[i] = src;
-  };
+  trackSources[i] = src;
+};
 
   stopBtn.onclick = () => {
     if (trackSources[i]) trackSources[i].stop();
