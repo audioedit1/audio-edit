@@ -279,7 +279,7 @@ tracks.forEach((track, i) => {
     src.connect(trackGains[i]);
 
     // IMPORTANT: simple start, no loop math
-    src.start(audioContext.currentTime, trackOffset);
+    src.start(audioContext.currentTime, trackOffset, 0);
 
     trackSources[i] = src;
   };
