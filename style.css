@@ -59,7 +59,7 @@ header {
 
 .editor {
   width: 80%;
-  margin: 40px auto;
+  margin: 40px auto 120px auto;
 }
 
 .track {
@@ -193,4 +193,8 @@ header {
 .grid-line.bar {
   background: #555;
   width: 2px;
+}
+
+body {
+  padding-bottom: 120px;
 }
