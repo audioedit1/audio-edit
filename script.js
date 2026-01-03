@@ -32,6 +32,8 @@ const trackSolo = [false, false, false];
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = 4;
+let draggingLoop = null; // "start" | "end"
+let draggingTimeline = null;
 
 // Playhead
 let playheadRAF = null;
@@ -61,22 +63,58 @@ masterSlider.oninput = () => {
 };
 
 // =====================
+// LOOP OVERLAY + HANDLES
+// =====================
+function updateLoopOverlay() {
+  document.querySelectorAll(".timeline").forEach(timeline => {
+    const loopEl = timeline.querySelector(".loop-region");
+    const startHandle = timeline.querySelector(".loop-start");
+    const endHandle = timeline.querySelector(".loop-end");
+
+    if (!loopEl || !startHandle || !endHandle) return;
+
+    if (!loopEnabled || loopEnd <= loopStart) {
+      loopEl.style.display = "none";
+      startHandle.style.display = "none";
+      endHandle.style.display = "none";
+      return;
+    }
+
+    const left = loopStart * 100;
+    const width = (loopEnd - loopStart) * 100;
+
+    loopEl.style.display = "block";
+    loopEl.style.left = left + "px";
+    loopEl.style.width = width + "px";
+
+    startHandle.style.display = "block";
+    endHandle.style.display = "block";
+
+    startHandle.style.left = left + "px";
+    endHandle.style.left = (left + width) + "px";
+  });
+}
+
+// =====================
 // LOOP CONTROLS
 // =====================
 loopStartInput.oninput = () => {
   loopStart = Math.max(0, Number(loopStartInput.value));
+  updateLoopOverlay();
 };
 
 loopEndInput.oninput = () => {
   loopEnd = Math.max(loopStart, Number(loopEndInput.value));
+  updateLoopOverlay();
 };
 
 loopEnabledCheckbox.onchange = () => {
   loopEnabled = loopEnabledCheckbox.checked;
+  updateLoopOverlay();
 };
 
 // =====================
-// FILE UPLOAD / LIBRARY
+// FILE UPLOAD
 // =====================
 fileInput.addEventListener("change", async () => {
   initAudio();
@@ -86,6 +124,9 @@ fileInput.addEventListener("change", async () => {
   fileInput.value = "";
 });
 
+// =====================
+// LIBRARY
+// =====================
 async function addToLibrary(file) {
   const buffer = await audioContext.decodeAudioData(
     await file.arrayBuffer()
@@ -119,6 +160,7 @@ async function addToLibrary(file) {
   li.onclick = () => {
     document.querySelectorAll("#fileList li")
       .forEach(el => el.classList.remove("selected"));
+
     li.classList.add("selected");
     selectedLibraryItem = { name: file.name, buffer };
   };
@@ -128,7 +170,7 @@ async function addToLibrary(file) {
 }
 
 // =====================
-// GAIN / MUTE / SOLO
+// GAIN LOGIC
 // =====================
 function updateTrackGain(i) {
   const anySolo = trackSolo.some(v => v);
@@ -143,7 +185,7 @@ function updateTrackGain(i) {
 }
 
 // =====================
-// TRACK SETUP
+// TRACKS
 // =====================
 tracks.forEach((track, i) => {
   const label = track.querySelector(".track-label");
@@ -167,7 +209,7 @@ tracks.forEach((track, i) => {
   };
 
   muteBtn.onclick = () => {
-    trackMuted[i] = !trackMuted[i];
+    trackMuted[i] = !trackMuted[i];   
     muteBtn.classList.toggle("active", trackMuted[i]);
     muteBtn.textContent = trackMuted[i] ? "Muted" : "Mute";
     for (let t = 0; t < 3; t++) updateTrackGain(t);
@@ -180,16 +222,14 @@ tracks.forEach((track, i) => {
     for (let t = 0; t < 3; t++) updateTrackGain(t);
   };
 
-  // Assign from library
   track.onclick = (e) => {
     if (!selectedLibraryItem) return;
-    if (["BUTTON", "INPUT"].includes(e.target.tagName)) return;
-
+    if (["BUTTON", "INPUT", "DIV"].includes(e.target.tagName)) return;
     trackBuffers[i] = selectedLibraryItem.buffer;
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
   };
 
-  // CLIP DRAG → OFFSET
+  // CLIP DRAG
   let dragging = false;
   let startX = 0;
   let startLeft = 0;
@@ -214,27 +254,32 @@ tracks.forEach((track, i) => {
     dragging = false;
     clip.style.cursor = "grab";
   });
+});
 
-  // =====================
-  // TRACK PLAY / STOP
-  // =====================
+// =====================
+// TRACK PLAY / STOP
+// =====================
+
+tracks.forEach((track, i) => {
+  const playBtn = track.querySelector(".track-play");
+  const stopBtn = track.querySelector(".track-stop");
+  const offsetInput = track.querySelector(".track-offset");
+
   playBtn.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
 
+    // stop previous
     if (trackSources[i]) trackSources[i].stop();
 
     const trackOffset = Number(offsetInput.value) || 0;
-    let bufferOffset = 0;
-
-    if (loopEnabled) {
-      bufferOffset = Math.max(0, loopStart - trackOffset);
-    }
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-    src.start(audioContext.currentTime, bufferOffset);
+
+    // IMPORTANT: simple start, no loop math
+    src.start(audioContext.currentTime, trackOffset);
 
     trackSources[i] = src;
   };
@@ -243,6 +288,7 @@ tracks.forEach((track, i) => {
     if (trackSources[i]) trackSources[i].stop();
   };
 });
+
 
 // =====================
 // PLAYHEAD
@@ -279,7 +325,7 @@ function updatePlayhead() {
 }
 
 // =====================
-// MASTER TRANSPORT
+// TRANSPORT
 // =====================
 function playAll() {
   initAudio();
@@ -290,7 +336,7 @@ function playAll() {
   tracks.forEach((track, i) => {
     if (!trackBuffers[i]) return;
 
-    if (trackSources[i]) trackSources[i].stop();
+    trackSources[i]?.stop();
 
     const trackOffset =
       Number(track.querySelector(".track-offset").value) || 0;
@@ -324,3 +370,45 @@ function stopAll() {
 
 playAllBtn.onclick = playAll;
 stopAllBtn.onclick = stopAll;
+
+// =====================
+// LOOP HANDLE DRAG
+// =====================
+document.addEventListener("mousedown", (e) => {
+  if (e.target.classList.contains("loop-start")) {
+    draggingLoop = "start";
+    draggingTimeline = e.target.closest(".timeline");
+  }
+  if (e.target.classList.contains("loop-end")) {
+    draggingLoop = "end";
+    draggingTimeline = e.target.closest(".timeline");
+  }
+});
+
+document.addEventListener("mousemove", (e) => {
+  if (!draggingLoop || !draggingTimeline) return;
+
+  const rect = draggingTimeline.getBoundingClientRect();
+  const x = Math.max(0, e.clientX - rect.left);
+  const seconds = +(x / 100).toFixed(2);
+
+  if (draggingLoop === "start") {
+    loopStart = Math.min(seconds, loopEnd - 0.1);
+    loopStartInput.value = loopStart;
+  }
+
+  if (draggingLoop === "end") {
+    loopEnd = Math.max(seconds, loopStart + 0.1);
+    loopEndInput.value = loopEnd;
+  }
+
+  updateLoopOverlay();
+});
+
+document.addEventListener("mouseup", () => {
+  draggingLoop = null;
+  draggingTimeline = null;
+});
+
+// Initial draw
+updateLoopOverlay();
