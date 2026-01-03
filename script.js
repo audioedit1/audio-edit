@@ -31,10 +31,27 @@ const trackMuted = [false, false, false];
 const trackSolo = [false, false, false];
 
 // =====================
+// TRACK GAIN RESOLUTION
+// =====================
+function updateTrackGains() {
+  const anySolo = trackSolo.some(s => s);
+
+  trackGains.forEach((gain, i) => {
+    if (!gain) return;
+
+    let value = trackFaders[i];
+
+    if (trackMuted[i]) value = 0;
+    if (anySolo && !trackSolo[i]) value = 0;
+
+    gain.gain.value = value;
+  });
+}
+
+// =====================
 // TRANSPORT
 // =====================
 let BPM = 120;
-let beatsPerBar = 4;
 
 function beatsToSeconds(beats) {
   return beats * (60 / BPM);
@@ -44,16 +61,14 @@ function secondsToBeats(seconds) {
   return seconds / (60 / BPM);
 }
 
-// Loop stored INTERNALLY in seconds
+// =====================
+// LOOP STATE
+// =====================
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = beatsToSeconds(4);
 let draggingLoop = null;
 let draggingTimeline = null;
-
-// Playhead
-let playheadRAF = null;
-let playheadStartTime = 0;
 
 // =====================
 // AUDIO INIT
@@ -110,12 +125,12 @@ function updateLoopOverlay() {
     endHandle.style.display = "block";
 
     startHandle.style.left = left + "px";
-    endHandle.style.left = (left + width) + "px";
+    endHandle.style.left = left + width + "px";
   });
 }
 
 // =====================
-// LOOP CONTROLS (inputs are beats)
+// LOOP CONTROLS
 // =====================
 loopStartInput.oninput = () => {
   loopStart = beatsToSeconds(Number(loopStartInput.value) || 0);
@@ -202,8 +217,28 @@ tracks.forEach((track, i) => {
   const clip = track.querySelector(".clip");
 
   initAudio();
+
   trackGains[i] = audioContext.createGain();
   trackGains[i].connect(masterGain);
+
+  slider.oninput = () => {
+    trackFaders[i] = Number(slider.value);
+    updateTrackGains();
+  };
+
+  muteBtn.onclick = e => {
+    e.stopPropagation();
+    trackMuted[i] = !trackMuted[i];
+    muteBtn.classList.toggle("active", trackMuted[i]);
+    updateTrackGains();
+  };
+
+  soloBtn.onclick = e => {
+    e.stopPropagation();
+    trackSolo[i] = !trackSolo[i];
+    soloBtn.classList.toggle("active", trackSolo[i]);
+    updateTrackGains();
+  };
 
   if (trimStartInput) {
     trimStartInput.oninput = () => {
@@ -220,6 +255,7 @@ tracks.forEach((track, i) => {
   playBtn.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
+
     trackSources[i]?.stop();
 
     const beatOffset = Number(offsetInput.value) || 0;
@@ -227,11 +263,15 @@ tracks.forEach((track, i) => {
       audioContext.currentTime + beatsToSeconds(beatOffset);
 
     const bufferDuration = trackBuffers[i].duration;
-    const trimStart = trackTrimStart[i] || 0;
-    const trimEnd =
-      trackTrimEnd[i] > 0
-        ? Math.min(trackTrimEnd[i], bufferDuration)
-        : bufferDuration;
+
+    const trimStart = Math.max(0, trackTrimStart[i] || 0);
+    const rawTrimEnd =
+      trackTrimEnd[i] > 0 ? trackTrimEnd[i] : bufferDuration;
+
+    const trimEnd = Math.max(
+      trimStart + 0.01,
+      Math.min(rawTrimEnd, bufferDuration)
+    );
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
@@ -241,7 +281,9 @@ tracks.forEach((track, i) => {
     trackSources[i] = src;
   };
 
-  stopBtn.onclick = () => trackSources[i]?.stop();
+  stopBtn.onclick = () => {
+    trackSources[i]?.stop();
+  };
 
   track.onclick = e => {
     if (!selectedLibraryItem) return;

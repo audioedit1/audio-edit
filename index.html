@@ -3,19 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <title>Audio Edit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- HEADER -->
+  <!-- =====================
+       HEADER
+  ====================== -->
   <header>
     <h1>Audio Edit</h1>
-    <p>Upload, arrange, and mix sounds in your browser.</p>
+    <p>Upload, arrange, and mix sounds in your browserss.</p>
   </header>
 
-  <!-- MASTER -->
+  <!-- =====================
+       MASTER
+  ====================== -->
   <section class="master">
-    <h2>Master</h2> 
+    <h2>Master</h2>
     <label>
       Volume
       <input
@@ -29,58 +34,87 @@
     </label>
   </section>
 
-  <!-- TRANSPORT -->
+  <!-- =====================
+       TRANSPORT
+  ====================== -->
   <section class="transport">
     <button id="playAll">Play</button>
     <button id="stopAll">Stop</button>
 
     <div class="loop-controls">
       <label>
-        Loop A (s)
-        <input type="number" id="loopStart" min="0" step="0.1" value="0">
+        Loop A (beats)
+        <input type="number" id="loopStart" min="0" step="0.1" value="0" />
       </label>
 
       <label>
-        Loop B (s)
-        <input type="number" id="loopEnd" min="0" step="0.1" value="4">
+        Loop B (beats)
+        <input type="number" id="loopEnd" min="0" step="0.1" value="4" />
       </label>
 
       <label>
-        <input type="checkbox" id="loopEnabled">
+        <input type="checkbox" id="loopEnabled" />
         Loop
       </label>
     </div>
   </section>
 
-  <!-- TRACKS --> 
+  <!-- =====================
+       TRACKS
+  ====================== -->
   <main>
     <section class="editor">
       <h2>Tracks</h2>
 
-      <!-- TRACK 1 -->
+      <!-- TRACK TEMPLATE -->
+      <!-- Track 1 -->
       <div class="track" data-track="0">
         <span class="track-label">Track 1 (empty)</span>
 
         <button class="track-mute">Mute</button>
         <button class="track-solo">Solo</button>
 
-        <input type="range" class="track-gain" min="0" max="1" step="0.01" value="1" />
+        <input
+          type="range"
+          class="track-gain"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
 
         <label class="offset">
-  Start (s)
-  <input type="number" class="track-offset" min="0" step="0.1" value="0" />
-</label>
+          Start (beats)
+          <input
+            type="number"
+            class="track-offset"
+            min="0"
+            step="0.1"
+            value="0"
+          />
+        </label>
 
-<label class="trim">
-  Trim In (s)
-  <input type="number" class="track-trim-start" min="0" step="0.01" value="0" />
-</label>
+        <label class="trim">
+          Trim In (s)
+          <input
+            type="number"
+            class="track-trim-start"
+            min="0"
+            step="0.01"
+            value="0"
+          />
+        </label>
 
-<label class="trim">
-  Trim Out (s)
-  <input type="number" class="track-trim-end" min="0" step="0.01" value="0" />
-</label>
-
+        <label class="trim">
+          Trim Out (s)
+          <input
+            type="number"
+            class="track-trim-end"
+            min="0"
+            step="0.01"
+            value="0"
+          />
+        </label>
 
         <div class="timeline">
           <div class="loop-region"></div>
@@ -94,18 +128,31 @@
         <button class="track-stop">Stop</button>
       </div>
 
-      <!-- TRACK 2 -->
+      <!-- Track 2 -->
       <div class="track" data-track="1">
         <span class="track-label">Track 2 (empty)</span>
 
         <button class="track-mute">Mute</button>
         <button class="track-solo">Solo</button>
 
-        <input type="range" class="track-gain" min="0" max="1" step="0.01" value="1" />
+        <input
+          type="range"
+          class="track-gain"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
 
         <label class="offset">
-          Start (s)
-          <input type="number" class="track-offset" min="0" step="0.1" value="0" />
+          Start (beats)
+          <input
+            type="number"
+            class="track-offset"
+            min="0"
+            step="0.1"
+            value="0"
+          />
         </label>
 
         <div class="timeline">
@@ -120,18 +167,31 @@
         <button class="track-stop">Stop</button>
       </div>
 
-      <!-- TRACK 3 -->
+      <!-- Track 3 -->
       <div class="track" data-track="2">
         <span class="track-label">Track 3 (empty)</span>
 
         <button class="track-mute">Mute</button>
         <button class="track-solo">Solo</button>
 
-        <input type="range" class="track-gain" min="0" max="1" step="0.01" value="1" />
+        <input
+          type="range"
+          class="track-gain"
+          min="0"
+          max="1"
+          step="0.01"
+          value="1"
+        />
 
         <label class="offset">
-          Start (s)
-          <input type="number" class="track-offset" min="0" step="0.1" value="0" />
+          Start (beats)
+          <input
+            type="number"
+            class="track-offset"
+            min="0"
+            step="0.1"
+            value="0"
+          />
         </label>
 
         <div class="timeline">
@@ -145,11 +205,12 @@
         <button class="track-play">Play</button>
         <button class="track-stop">Stop</button>
       </div>
-
     </section>
   </main>
 
-  <!-- SOUND LIBRARY -->
+  <!-- =====================
+       SOUND LIBRARY
+  ====================== -->
   <section class="upload-section">
     <h2>Sound Library</h2>
 
@@ -157,7 +218,9 @@
     <ul id="fileList"></ul>
   </section>
 
-  <!-- SCRIPT -->
+  <!-- =====================
+       SCRIPT
+  ====================== -->
   <script src="script.js"></script>
 </body>
 </html>
