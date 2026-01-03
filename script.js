@@ -28,11 +28,18 @@ const trackFaders = [1, 1, 1];
 const trackMuted = [false, false, false];
 const trackSolo = [false, false, false];
 
-// Loop
+
+// =====================
+// TRANSPORT (MUSICAL TIME)
+// =====================
+let BPM = 120;
+let beatsPerBar = 4; // 4/4
+
+// Loop values are now BEATS (not seconds)
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = 4;
-let draggingLoop = null; // "start" | "end"
+let draggingLoop = null;
 let draggingTimeline = null;
 
 // Playhead
@@ -272,7 +279,9 @@ tracks.forEach((track, i) => {
     // stop previous
     if (trackSources[i]) trackSources[i].stop();
 
-    const trackOffset = Number(offsetInput.value) || 0;
+   const beatOffset = Number(offsetInput.value) || 0;
+const secondsPerBeat = 60 / BPM;
+const trackOffsetSeconds = beatOffset * secondsPerBeat;
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
