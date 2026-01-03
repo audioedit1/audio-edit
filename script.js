@@ -126,8 +126,9 @@ function initAudio() {
 playAllBtn.onclick = async () => {
   initAudio();
   await audioContext.resume();
-startPlayhead();
+  startPlayhead();
 
+  // stop any running loops first
   loopTimers.forEach((_, i) => stopLoopForTrack(i));
 
   tracks.forEach((track, i) => {
@@ -135,6 +136,13 @@ startPlayhead();
 
     trackSources[i]?.stop();
 
+    // 🔴 IMPORTANT: if loop is enabled, ONLY start loop
+    if (loopEnabled) {
+      startLoopForTrack(i);
+      return;
+    }
+
+    // normal (non-loop) playback
     const offsetInput = track.querySelector(".track-offset");
     const beatOffset = Number(offsetInput?.value) || 0;
 
@@ -158,8 +166,6 @@ startPlayhead();
     src.start(startTime, trimStart, trimEnd - trimStart);
 
     trackSources[i] = src;
-
-    if (loopEnabled) startLoopForTrack(i);
   });
 };
 
