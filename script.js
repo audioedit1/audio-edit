@@ -78,18 +78,10 @@ function initAudio() {
 }
 
 // =====================
-// MASTER VOLUME CONTROL
-// =====================
-masterSlider.oninput = () => {
-  if (!masterGain) return;
-  masterGain.gain.value = Number(masterSlider.value);
-};
-
-// =====================
 // PLAY ALL / STOP ALL
 // =====================
 playAllBtn.onclick = async () => {
-  initAudio();                  // ensure audio graph exists
+  initAudio();
   await audioContext.resume();
 
   loopTimers.forEach((_, i) => stopLoopForTrack(i));
@@ -133,8 +125,6 @@ stopAllBtn.onclick = () => {
     stopLoopForTrack(i);
   });
 };
-
-
 
 // =====================
 // LOOP (AUDIO + VISUAL)
@@ -218,7 +208,10 @@ function startLoopForTrack(i) {
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-    src.start(audioContext.currentTime, loopStart, duration);
+
+    const now = audioContext.currentTime;
+    src.start(now, loopStart, duration);
+    src.stop(now + duration);   // ← HARD STOP (CRITICAL)
 
     trackSources[i] = src;
 
@@ -227,10 +220,10 @@ function startLoopForTrack(i) {
 }
 
 function stopLoopForTrack(i) {
+  trackSources[i]?.stop();     // ← stop current audio immediately
   clearTimeout(loopTimers[i]);
   loopTimers[i] = null;
 }
-
 
 // =====================
 // FILE UPLOAD
