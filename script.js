@@ -13,6 +13,9 @@ const loopStartInput = document.getElementById("loopStart");
 const loopEndInput = document.getElementById("loopEnd");
 const loopEnabledCheckbox = document.getElementById("loopEnabled");
 
+let playheadRAF = null;
+let playheadStartTime = null;
+
 // =====================
 // GLOBAL STATE
 // =====================
@@ -40,6 +43,7 @@ function updateTrackGains() {
     if (!gain) return;
 
     let value = trackFaders[i];
+
     if (trackMuted[i]) value = 0;
     if (anySolo && !trackSolo[i]) value = 0;
 
@@ -51,8 +55,54 @@ function updateTrackGains() {
 // TRANSPORT / TIME
 // =====================
 let BPM = 120;
-const beatsToSeconds = b => b * (60 / BPM);
-const secondsToBeats = s => s / (60 / BPM);
+
+function beatsToSeconds(beats) {
+  return beats * (60 / BPM);
+}
+
+function secondsToBeats(seconds) {
+  return seconds / (60 / BPM);
+}
+
+function startPlayhead() {
+  cancelAnimationFrame(playheadRAF);
+  playheadStartTime = audioContext.currentTime;
+
+  function tick() {
+    if (playheadStartTime === null) return;
+
+    const elapsed =
+      audioContext.currentTime - playheadStartTime;
+
+    document.querySelectorAll(".timeline").forEach(timeline => {
+      const playhead = timeline.querySelector(".playhead");
+      if (!playhead) return;
+
+      const totalSeconds = beatsToSeconds(8);
+      const pxPerSecond = timeline.clientWidth / totalSeconds;
+
+      const x = Math.min(
+        elapsed * pxPerSecond,
+        timeline.clientWidth
+      );
+
+      playhead.style.left = x + "px";
+    });
+
+    playheadRAF = requestAnimationFrame(tick);
+  }
+
+  tick();
+}
+
+function stopPlayhead() {
+  playheadStartTime = null;
+  cancelAnimationFrame(playheadRAF);
+
+  document.querySelectorAll(".playhead").forEach(ph => {
+    ph.style.left = "0px";
+  });
+}
 
 // =====================
 // AUDIO INIT
@@ -63,7 +113,7 @@ function initAudio() {
   audioContext = new AudioContext();
 
   masterGain = audioContext.createGain();
-  masterGain.gain.value = Number(masterSlider.value);
+  masterGain.gain.value = masterSlider.value;
   masterGain.connect(audioContext.destination);
 
   previewGain = audioContext.createGain();
@@ -71,19 +121,12 @@ function initAudio() {
 }
 
 // =====================
-// MASTER VOLUME CONTROL
-// =====================
-masterSlider.oninput = () => {
-  if (!masterGain) return;
-  masterGain.gain.value = Number(masterSlider.value);
-};
-
-// =====================
 // PLAY ALL / STOP ALL
 // =====================
 playAllBtn.onclick = async () => {
   initAudio();
   await audioContext.resume();
+startPlayhead();
 
   loopTimers.forEach((_, i) => stopLoopForTrack(i));
 
@@ -92,21 +135,22 @@ playAllBtn.onclick = async () => {
 
     trackSources[i]?.stop();
 
-    if (loopEnabled) {
-      startLoopForTrack(i);
-      return;
-    }
-
     const offsetInput = track.querySelector(".track-offset");
     const beatOffset = Number(offsetInput?.value) || 0;
+
     const startTime =
       audioContext.currentTime + beatsToSeconds(beatOffset);
 
     const bufferDuration = trackBuffers[i].duration;
+
     const trimStart = Math.max(0, trackTrimStart[i] || 0);
     const rawTrimEnd =
       trackTrimEnd[i] > 0 ? trackTrimEnd[i] : bufferDuration;
-    const trimEnd = Math.max(trimStart + 0.01, Math.min(rawTrimEnd, bufferDuration));
+
+    const trimEnd = Math.max(
+      trimStart + 0.01,
+      Math.min(rawTrimEnd, bufferDuration)
+    );
 
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
@@ -114,10 +158,15 @@ playAllBtn.onclick = async () => {
     src.start(startTime, trimStart, trimEnd - trimStart);
 
     trackSources[i] = src;
+
+    if (loopEnabled) startLoopForTrack(i);
   });
 };
 
+stopPlayhead();
 stopAllBtn.onclick = () => {
+  stopPlayhead(); // ← HERE
+
   trackSources.forEach((src, i) => {
     src?.stop();
     stopLoopForTrack(i);
@@ -125,37 +174,80 @@ stopAllBtn.onclick = () => {
 };
 
 // =====================
-// LOOP STATE
+// LOOP (AUDIO + VISUAL)
 // =====================
+
+// Loop state (seconds)
 let loopEnabled = false;
 let loopStart = 0;
 let loopEnd = beatsToSeconds(4);
+
+let draggingLoop = null;
+let draggingTimeline = null;
+
+// Per-track loop timers
 const loopTimers = [null, null, null];
 
-// =====================
-// LOOP CONTROLS
-// =====================
+// ---------- VISUAL OVERLAY ----------
+function updateLoopOverlay() {
+  document.querySelectorAll(".timeline").forEach(timeline => {
+    const loopEl = timeline.querySelector(".loop-region");
+    const startHandle = timeline.querySelector(".loop-start");
+    const endHandle = timeline.querySelector(".loop-end");
+
+    if (!loopEl || !startHandle || !endHandle) return;
+
+    if (!loopEnabled || loopEnd <= loopStart) {
+      loopEl.style.display = "none";
+      startHandle.style.display = "none";
+      endHandle.style.display = "none";
+      return;
+    }
+
+    const totalSeconds = beatsToSeconds(8);
+    const pxPerSecond = timeline.clientWidth / totalSeconds;
+
+    const left = loopStart * pxPerSecond;
+    const width = (loopEnd - loopStart) * pxPerSecond;
+
+    loopEl.style.display = "block";
+    loopEl.style.left = left + "px";
+    loopEl.style.width = width + "px";
+
+    startHandle.style.display = "block";
+    endHandle.style.display = "block";
+
+    startHandle.style.left = left + "px";
+    endHandle.style.left = left + width + "px";
+  });
+}
+
+// ---------- LOOP CONTROLS ----------
 loopStartInput.oninput = () => {
   loopStart = beatsToSeconds(Number(loopStartInput.value) || 0);
+  updateLoopOverlay();
 };
 
 loopEndInput.oninput = () => {
   loopEnd = beatsToSeconds(Number(loopEndInput.value) || 0);
+  updateLoopOverlay();
 };
 
 loopEnabledCheckbox.onchange = () => {
   loopEnabled = loopEnabledCheckbox.checked;
+  updateLoopOverlay();
 };
 
-// =====================
-// AUDIO LOOP ENGINE
-// =====================
+// ---------- AUDIO LOOP ENGINE ----------
 function startLoopForTrack(i) {
-  if (!loopEnabled || !trackBuffers[i]) return;
+  if (!loopEnabled) return;
+  if (!trackBuffers[i]) return;
 
   clearTimeout(loopTimers[i]);
 
-  function playOnce() {
+  const duration = Math.max(0.01, loopEnd - loopStart);
+
+  loopTimers[i] = setTimeout(() => {
     if (!loopEnabled) return;
 
     trackSources[i]?.stop();
@@ -164,22 +256,18 @@ function startLoopForTrack(i) {
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
 
-    const duration = Math.max(0.01, loopEnd - loopStart);
     const now = audioContext.currentTime;
-
     src.start(now, loopStart, duration);
-    src.stop(now + duration);
+    src.stop(now + duration);   // ← HARD STOP (CRITICAL)
 
     trackSources[i] = src;
 
-    loopTimers[i] = setTimeout(playOnce, duration * 1000);
-  }
-
-  playOnce();
+    startLoopForTrack(i);
+  }, duration * 1000);
 }
 
 function stopLoopForTrack(i) {
-  trackSources[i]?.stop();
+  trackSources[i]?.stop();     // ← stop current audio immediately
   clearTimeout(loopTimers[i]);
   loopTimers[i] = null;
 }
@@ -190,8 +278,7 @@ function stopLoopForTrack(i) {
 fileInput.addEventListener("change", async () => {
   initAudio();
   for (const file of fileInput.files) {
-    const buffer = await audioContext.decodeAudioData(await file.arrayBuffer());
-    addToLibrary(file.name, buffer);
+    await addToLibrary(file);
   }
   fileInput.value = "";
 });
@@ -199,54 +286,223 @@ fileInput.addEventListener("change", async () => {
 // =====================
 // LIBRARY
 // =====================
-function addToLibrary(name, buffer) {
+async function addToLibrary(file) {
+  const buffer = await audioContext.decodeAudioData(await file.arrayBuffer());
+
   const li = document.createElement("li");
-  li.textContent = name;
-  li.onclick = () => selectedLibraryItem = { name, buffer };
+  li.textContent = file.name + " ";
+  li.style.cursor = "pointer";
+
+  let previewSource = null;
+
+  const play = document.createElement("button");
+  play.textContent = "Play";
+
+  const stop = document.createElement("button");
+  stop.textContent = "Stop";
+
+  play.onclick = async e => {
+    e.stopPropagation();
+    if (audioContext.state !== "running") await audioContext.resume();
+    previewSource?.stop();
+    previewSource = audioContext.createBufferSource();
+    previewSource.buffer = buffer;
+    previewSource.connect(previewGain);
+    previewSource.start();
+  };
+
+  stop.onclick = () => previewSource?.stop();
+
+  li.onclick = () => {
+    document.querySelectorAll("#fileList li").forEach(el =>
+      el.classList.remove("selected")
+    );
+    li.classList.add("selected");
+    selectedLibraryItem = { name: file.name, buffer };
+  };
+
+  li.append(play, stop);
   fileList.appendChild(li);
 }
 
 // =====================
-// TRACK SETUP
+// TRACKS
 // =====================
 tracks.forEach((track, i) => {
-  initAudio();
-  trackGains[i] = audioContext.createGain();
-  trackGains[i].connect(masterGain);
-
+  const label = track.querySelector(".track-label");
   const playBtn = track.querySelector(".track-play");
   const stopBtn = track.querySelector(".track-stop");
   const slider = track.querySelector(".track-gain");
+  const muteBtn = track.querySelector(".track-mute");
+  const soloBtn = track.querySelector(".track-solo");
+  const offsetInput = track.querySelector(".track-offset");
+  const trimStartInput = track.querySelector(".track-trim-start");
+  const trimEndInput = track.querySelector(".track-trim-end");
+  const timeline = track.querySelector(".timeline");
+  const clip = track.querySelector(".clip");
+
+  initAudio();
+
+  trackGains[i] = audioContext.createGain();
+  trackGains[i].connect(masterGain);
+
+  function updateClipVisual() {
+    if (!trackBuffers[i]) return;
+
+    const duration = trackBuffers[i].duration;
+    const totalSeconds = beatsToSeconds(8);
+    const pxPerSecond = timeline.clientWidth / totalSeconds;
+
+    const trimStart = trackTrimStart[i] || 0;
+    const trimEnd =
+      trackTrimEnd[i] > 0 ? trackTrimEnd[i] : duration;
+
+    const visibleDuration = Math.max(0.01, trimEnd - trimStart);
+    clip.style.width = visibleDuration * pxPerSecond + "px";
+  }
 
   slider.oninput = () => {
     trackFaders[i] = Number(slider.value);
     updateTrackGains();
   };
 
+  muteBtn.onclick = e => {
+    e.stopPropagation();
+    trackMuted[i] = !trackMuted[i];
+    muteBtn.classList.toggle("active", trackMuted[i]);
+    updateTrackGains();
+  };
+
+  soloBtn.onclick = e => {
+    e.stopPropagation();
+    trackSolo[i] = !trackSolo[i];
+    soloBtn.classList.toggle("active", trackSolo[i]);
+    updateTrackGains();
+  };
+
+  if (trimStartInput) {
+    trimStartInput.oninput = () => {
+      trackTrimStart[i] = Math.max(0, Number(trimStartInput.value) || 0);
+      updateClipVisual();
+    };
+  }
+
+  if (trimEndInput) {
+    trimEndInput.oninput = () => {
+      trackTrimEnd[i] = Math.max(0, Number(trimEndInput.value) || 0);
+      updateClipVisual();
+    };
+  }
+
   playBtn.onclick = async () => {
     if (!trackBuffers[i]) return;
-    await audioContext.resume();
-
-    if (loopEnabled) {
-      startLoopForTrack(i);
-      return;
-    }
+    if (audioContext.state !== "running") await audioContext.resume();
 
     trackSources[i]?.stop();
+
+    startPlayhead();
+
+    const beatOffset = Number(offsetInput.value) || 0;
+    const startTime =
+      audioContext.currentTime + beatsToSeconds(beatOffset);
+
+    const bufferDuration = trackBuffers[i].duration;
+
+    const trimStart = Math.max(0, trackTrimStart[i] || 0);
+    const rawTrimEnd =
+      trackTrimEnd[i] > 0 ? trackTrimEnd[i] : bufferDuration;
+
+    const trimEnd = Math.max(
+      trimStart + 0.01,
+      Math.min(rawTrimEnd, bufferDuration)
+    );
+
     const src = audioContext.createBufferSource();
     src.buffer = trackBuffers[i];
     src.connect(trackGains[i]);
-    src.start();
-    trackSources[i] = src;
+    src.start(startTime, trimStart, trimEnd - trimStart);
+
+trackSources[i] = src;
+
+if (loopEnabled) startLoopForTrack(i);
   };
 
   stopBtn.onclick = () => {
-    trackSources[i]?.stop();
-    stopLoopForTrack(i);
+  trackSources[i]?.stop();
+};
+
+  track.onclick = e => {
+    if (!selectedLibraryItem) return;
+    if (["BUTTON", "INPUT", "DIV"].includes(e.target.tagName)) return;
+    trackBuffers[i] = selectedLibraryItem.buffer;
+    label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
+    updateClipVisual();
   };
 
-  track.onclick = () => {
-    if (!selectedLibraryItem) return;
-    trackBuffers[i] = selectedLibraryItem.buffer;
+  let dragging = false;
+  let startX = 0;
+  let startLeft = 0;
+
+  clip.onmousedown = e => {
+    dragging = true;
+    startX = e.clientX;
+    startLeft = clip.offsetLeft;
   };
+
+  document.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    let x = startLeft + (e.clientX - startX);
+    x = Math.max(0, Math.min(x, timeline.clientWidth - clip.clientWidth));
+    clip.style.left = x + "px";
+
+    const seconds = (x / timeline.clientWidth) * beatsToSeconds(8);
+    offsetInput.value = secondsToBeats(seconds).toFixed(2);
+  });
+
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+  });
 });
+
+// =====================
+// LOOP HANDLE DRAG
+// =====================
+document.addEventListener("mousedown", e => {
+  if (e.target.classList.contains("loop-start")) {
+    draggingLoop = "start";
+    draggingTimeline = e.target.closest(".timeline");
+  }
+  if (e.target.classList.contains("loop-end")) {
+    draggingLoop = "end";
+    draggingTimeline = e.target.closest(".timeline");
+  }
+});
+
+document.addEventListener("mousemove", e => {
+  if (!draggingLoop || !draggingTimeline) return;
+
+  const rect = draggingTimeline.getBoundingClientRect();
+  const x = Math.max(0, e.clientX - rect.left);
+  const seconds =
+    (x / draggingTimeline.clientWidth) * beatsToSeconds(8);
+
+  if (draggingLoop === "start") {
+    loopStart = Math.min(seconds, loopEnd - 0.01);
+    loopStartInput.value = secondsToBeats(loopStart).toFixed(2);
+  }
+
+  if (draggingLoop === "end") {
+    loopEnd = Math.max(seconds, loopStart + 0.01);
+    loopEndInput.value = secondsToBeats(loopEnd).toFixed(2);
+  }
+
+  updateLoopOverlay();
+});
+
+document.addEventListener("mouseup", () => {
+  draggingLoop = null;
+  draggingTimeline = null;
+});
+
+// Initial draw
+updateLoopOverlay();
