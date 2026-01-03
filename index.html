@@ -10,7 +10,7 @@
   <!-- HEADER -->
   <header>
     <h1>Audio Edit</h1>
-    <p>Upload, arrange, and mix sounds in your browserss.</p>
+    <p>Upload, arrange, and mix sounds in your browser.</p>
   </header>
 
   <!-- MASTER -->
@@ -67,9 +67,20 @@
         <input type="range" class="track-gain" min="0" max="1" step="0.01" value="1" />
 
         <label class="offset">
-          Start (s)
-          <input type="number" class="track-offset" min="0" step="0.1" value="0" />
-        </label>
+  Start (s)
+  <input type="number" class="track-offset" min="0" step="0.1" value="0" />
+</label>
+
+<label class="trim">
+  Trim In (s)
+  <input type="number" class="track-trim-start" min="0" step="0.01" value="0" />
+</label>
+
+<label class="trim">
+  Trim Out (s)
+  <input type="number" class="track-trim-end" min="0" step="0.01" value="0" />
+</label>
+
 
         <div class="timeline">
           <div class="loop-region"></div>
