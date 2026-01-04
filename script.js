@@ -32,6 +32,7 @@ const trackGains = [null, null, null];
 const trackFaders = [1, 1, 1];
 const trackMuted = [false, false, false];
 const trackSolo = [false, false, false];
+const trackPlaybackCallbacks = [];
 
 // =====================
 // TRACK GAIN RESOLUTION
@@ -73,9 +74,7 @@ function startPlayhead() {
 
   if (!audioContext) return;
 
-  const startContextTime = audioContext.currentTime;
-  let lastContextTime = startContextTime;
-
+  let lastContextTime = audioContext.currentTime;
   isTransportRunning = true;
 
   function tick() {
@@ -108,12 +107,8 @@ function startPlayhead() {
       playhead.style.left = x + "px";
     });
 
-    // 🔴 CRITICAL: DRIVE TRACK AUDIO FROM TRANSPORT
-    tracks.forEach((_, i) => {
-      if (typeof updateTrackPlayback === "function") {
-        updateTrackPlayback(i);
-      }
-    });
+    // 🔴 DRIVE TRACK AUDIO FROM TRANSPORT (FIX)
+    trackPlaybackCallbacks.forEach(fn => fn && fn());
 
     playheadRAF = requestAnimationFrame(tick);
   }
@@ -473,43 +468,41 @@ tracks.forEach((track, i) => {
   }
 
   // ===== TRANSPORT-DRIVEN PLAYBACK =====
+function updateTrackPlayback() {
+  if (!isTransportRunning || !trackBuffers[i]) return;
 
-  function updateTrackPlayback() {
-    if (!isTransportRunning || !trackBuffers[i]) return;
+  const beatOffset = Number(offsetInput.value) || 0;
+  const clipStart = beatsToSeconds(beatOffset);
+  const clipEnd =
+    clipStart +
+    (trackTrimEnd[i] > 0
+      ? trackTrimEnd[i] - (trackTrimStart[i] || 0)
+      : trackBuffers[i].duration);
 
-    const beatOffset = Number(offsetInput.value) || 0;
-    const clipStart = beatsToSeconds(beatOffset);
-    const clipEnd =
-      clipStart +
-      (trackTrimEnd[i] > 0
-        ? trackTrimEnd[i] - (trackTrimStart[i] || 0)
-        : trackBuffers[i].duration);
+  const isInside =
+    transportTime >= clipStart && transportTime < clipEnd;
 
-    const isInside =
-      transportTime >= clipStart && transportTime < clipEnd;
+  if (isInside && !trackIsPlaying[i]) {
+    const src = audioContext.createBufferSource();
+    src.buffer = trackBuffers[i];
+    src.connect(trackGains[i]);
 
-    if (isInside && !trackIsPlaying[i]) {
-      const src = audioContext.createBufferSource();
-      src.buffer = trackBuffers[i];
-      src.connect(trackGains[i]);
+    const offset =
+      transportTime - clipStart + (trackTrimStart[i] || 0);
+    src.start(0, offset);
 
-      const offset = transportTime - clipStart + (trackTrimStart[i] || 0);
-      src.start(0, offset);
-
-      trackSources[i] = src;
-      trackIsPlaying[i] = true;
-    }
-
-    if (!isInside && trackIsPlaying[i]) {
-      trackSources[i]?.stop();
-      trackSources[i] = null;
-      trackIsPlaying[i] = false;
-    }
+    trackSources[i] = src;
+    trackIsPlaying[i] = true;
   }
 
-  // hook into animation frame
-  const originalRAF = requestAnimationFrame;
-  requestAnimationFrame(() => updateTrackPlayback());
+  if (!isInside && trackIsPlaying[i]) {
+    trackSources[i]?.stop();
+    trackSources[i] = null;
+    trackIsPlaying[i] = false;
+  }
+}
+// register this track's playback with the transport (ONCE)
+trackPlaybackCallbacks[i] = updateTrackPlayback;
 
   // ===== BUTTONS =====
 
