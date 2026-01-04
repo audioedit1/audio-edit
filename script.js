@@ -524,6 +524,32 @@ tracks.forEach((track, i) => {
 
   // register this track's playback with the transport (ONCE)
   trackPlaybackCallbacks[i] = updateTrackPlayback;
+
+  // ===== ASSIGN SAMPLE FROM LIBRARY =====
+  track.onclick = e => {
+    if (!selectedLibraryItem) return;
+
+    // block only real controls
+    if (
+      e.target === playBtn ||
+      e.target === stopBtn ||
+      e.target === slider ||
+      e.target === muteBtn ||
+      e.target === soloBtn ||
+      e.target === offsetInput ||
+      e.target === trimStartInput ||
+      e.target === trimEndInput
+    ) {
+      return;
+    }
+
+    trackBuffers[i] = selectedLibraryItem.buffer;
+    trackTrimStart[i] = 0;
+    trackTrimEnd[i] = null;
+
+    label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
+    updateClipVisual();
+  };
 });
 
 // =====================
