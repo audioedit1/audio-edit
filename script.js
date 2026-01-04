@@ -494,44 +494,52 @@ tracks.forEach((track, i) => {
     };
   }
 
-  // ===== TRANSPORT-DRIVEN PLAYBACK =====
-  function updateTrackPlayback() {
-    if (!isTransportRunning || !trackBuffers[i]) return;
-    if (activeTrackIndex !== null && activeTrackIndex !== i) return;
+ // ===== TRANSPORT-DRIVEN PLAYBACK =====
+function updateTrackPlayback() {
+  if (!isTransportRunning || !trackBuffers[i]) return;
+  if (activeTrackIndex !== null && activeTrackIndex !== i) return;
 
-    const bufferDuration = trackBuffers[i].duration;
-    const trimStart = trackTrimStart[i] || 0;
-    const trimEnd =
-      trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
+  const bufferDuration = trackBuffers[i].duration;
 
-    const clipStart = beatsToSeconds(trackOffsets[i] || 0);
-    const clipDuration = trimEnd - trimStart;
-    const clipEnd = clipStart + clipDuration;
+  const trimStart = trackTrimStart[i] || 0;
+  const trimEnd =
+    trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
 
-    const isInside =
-      transportTime >= clipStart && transportTime < clipEnd;
+  const clipStart = beatsToSeconds(trackOffsets[i] || 0);
+  const clipDuration = Math.max(0.01, trimEnd - trimStart);
+  const clipEnd = clipStart + clipDuration;
 
-    if (isInside && !trackIsPlaying[i]) {
-      const src = audioContext.createBufferSource();
-      src.buffer = trackBuffers[i];
-      src.connect(trackGains[i]);
+  const isInside =
+    transportTime >= clipStart && transportTime < clipEnd;
 
-      const bufferOffset =
-        trimStart + (transportTime - clipStart);
+  if (isInside && !trackIsPlaying[i]) {
+    const src = audioContext.createBufferSource();
+    src.buffer = trackBuffers[i];
+    src.connect(trackGains[i]);
 
-      src.start(0, bufferOffset);
-      src.stop(audioContext.currentTime + (clipEnd - transportTime));
+    // transport-relative position inside clip
+    const transportOffset = transportTime - clipStart;
 
-      trackSources[i] = src;
-      trackIsPlaying[i] = true;
-    }
+    // absolute position inside audio buffer
+    const bufferOffset = trimStart + transportOffset;
 
-    if (!isInside && trackIsPlaying[i]) {
-      trackSources[i]?.stop();
-      trackSources[i] = null;
-      trackIsPlaying[i] = false;
-    }
+    // align playback to AudioContext clock
+    const startAt = audioContext.currentTime;
+    const remaining = clipEnd - transportTime;
+
+    src.start(startAt, bufferOffset, remaining);
+    src.stop(startAt + remaining);
+
+    trackSources[i] = src;
+    trackIsPlaying[i] = true;
   }
+
+  if (!isInside && trackIsPlaying[i]) {
+    trackSources[i]?.stop();
+    trackSources[i] = null;
+    trackIsPlaying[i] = false;
+  }
+}
 
   trackPlaybackCallbacks[i] = updateTrackPlayback;
 
