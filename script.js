@@ -411,10 +411,10 @@ async function addToLibrary(file) {
 // per-track playback state
 const trackIsPlaying = [false, false, false];
 
-// NEW: persistent clip offsets (in beats)
+// persistent clip offsets (beats)
 const trackOffsets = [0, 0, 0];
 
-// NEW: which track is armed for solo play (null = play all)
+// active solo-play track (null = play all)
 let activeTrackIndex = null;
 
 tracks.forEach((track, i) => {
@@ -474,6 +474,12 @@ tracks.forEach((track, i) => {
     updateTrackGains();
   };
 
+  // 🔴 FIX: offset input must update state
+  offsetInput.oninput = () => {
+    trackOffsets[i] = Math.max(0, Number(offsetInput.value) || 0);
+    updateClipVisual();
+  };
+
   if (trimStartInput) {
     trimStartInput.oninput = () => {
       trackTrimStart[i] = Math.max(0, Number(trimStartInput.value) || 0);
@@ -491,8 +497,6 @@ tracks.forEach((track, i) => {
   // ===== TRANSPORT-DRIVEN PLAYBACK =====
   function updateTrackPlayback() {
     if (!isTransportRunning || !trackBuffers[i]) return;
-
-    // NEW: solo track play guard
     if (activeTrackIndex !== null && activeTrackIndex !== i) return;
 
     const bufferDuration = trackBuffers[i].duration;
@@ -538,7 +542,7 @@ tracks.forEach((track, i) => {
     if (audioContext.state !== "running") await audioContext.resume();
 
     activeTrackIndex = i;
-    transportTime = 0;
+    transportTime = beatsToSeconds(trackOffsets[i] || 0);
     startPlayhead();
   };
 
@@ -550,7 +554,7 @@ tracks.forEach((track, i) => {
     trackIsPlaying[i] = false;
   };
 
-  // ===== CLIP DRAG (TIME SHIFT) =====
+  // ===== CLIP DRAG =====
   let dragging = false;
   let dragStartX = 0;
   let dragStartLeft = 0;
@@ -565,18 +569,12 @@ tracks.forEach((track, i) => {
   document.addEventListener("mousemove", e => {
     if (!dragging) return;
 
-    const dx = e.clientX - dragStartX;
-    let newLeft = dragStartLeft + dx;
-
-    newLeft = Math.max(
-      0,
-      Math.min(newLeft, timeline.clientWidth - clip.clientWidth)
-    );
+    let newLeft = dragStartLeft + (e.clientX - dragStartX);
+    newLeft = Math.max(0, Math.min(newLeft, timeline.clientWidth - clip.clientWidth));
 
     clip.style.left = newLeft + "px";
 
-    const seconds =
-      (newLeft / timeline.clientWidth) * beatsToSeconds(8);
+    const seconds = (newLeft / timeline.clientWidth) * beatsToSeconds(8);
     const beats = secondsToBeats(seconds);
 
     trackOffsets[i] = beats;
@@ -608,6 +606,7 @@ tracks.forEach((track, i) => {
     trackTrimStart[i] = 0;
     trackTrimEnd[i] = null;
     trackOffsets[i] = 0;
+    offsetInput.value = "0";
 
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
     updateClipVisual();
