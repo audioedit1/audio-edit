@@ -74,7 +74,7 @@ function startPlayhead() {
   if (!audioContext) return;
 
   const startContextTime = audioContext.currentTime;
-  const startTransportTime = transportTime;
+  let lastContextTime = startContextTime;
 
   isTransportRunning = true;
 
@@ -82,14 +82,17 @@ function startPlayhead() {
     if (!isTransportRunning) return;
 
     const now = audioContext.currentTime;
-    let elapsed = now - startContextTime;
-    transportTime = startTransportTime + elapsed;
+    const delta = now - lastContextTime;
+    lastContextTime = now;
+
+    transportTime += delta;
 
     // LOOP (transport-based)
     if (loopEnabled && transportTime >= loopEnd) {
       transportTime = loopStart;
     }
 
+    // UPDATE PLAYHEAD VISUAL
     document.querySelectorAll(".timeline").forEach(timeline => {
       const playhead = timeline.querySelector(".playhead");
       if (!playhead) return;
@@ -103,6 +106,13 @@ function startPlayhead() {
       );
 
       playhead.style.left = x + "px";
+    });
+
+    // 🔴 CRITICAL: DRIVE TRACK AUDIO FROM TRANSPORT
+    tracks.forEach((_, i) => {
+      if (typeof updateTrackPlayback === "function") {
+        updateTrackPlayback(i);
+      }
     });
 
     playheadRAF = requestAnimationFrame(tick);
