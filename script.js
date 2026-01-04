@@ -407,8 +407,15 @@ async function addToLibrary(file) {
 // =====================
 // TRACKS
 // =====================
+
 // per-track playback state
 const trackIsPlaying = [false, false, false];
+
+// NEW: persistent clip offsets (in beats)
+const trackOffsets = [0, 0, 0];
+
+// NEW: which track is armed for solo play (null = play all)
+let activeTrackIndex = null;
 
 tracks.forEach((track, i) => {
   const label = track.querySelector(".track-label");
@@ -441,11 +448,10 @@ tracks.forEach((track, i) => {
       trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
 
     const visibleDuration = Math.max(0.01, trimEnd - trimStart);
-
     clip.style.width = visibleDuration * pxPerSecond + "px";
 
-    const leftPx = (trimStart / bufferDuration) * timeline.clientWidth;
-    clip.style.left = leftPx + "px";
+    const offsetSeconds = beatsToSeconds(trackOffsets[i] || 0);
+    clip.style.left = offsetSeconds * pxPerSecond + "px";
   }
 
   // ===== UI CONTROLS =====
@@ -486,13 +492,15 @@ tracks.forEach((track, i) => {
   function updateTrackPlayback() {
     if (!isTransportRunning || !trackBuffers[i]) return;
 
+    // NEW: solo track play guard
+    if (activeTrackIndex !== null && activeTrackIndex !== i) return;
+
     const bufferDuration = trackBuffers[i].duration;
     const trimStart = trackTrimStart[i] || 0;
     const trimEnd =
       trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
 
-    const beatOffset = Number(offsetInput.value) || 0;
-    const clipStart = beatsToSeconds(beatOffset);
+    const clipStart = beatsToSeconds(trackOffsets[i] || 0);
     const clipDuration = trimEnd - trimStart;
     const clipEnd = clipStart + clipDuration;
 
@@ -523,18 +531,20 @@ tracks.forEach((track, i) => {
 
   trackPlaybackCallbacks[i] = updateTrackPlayback;
 
-  // ===== TRACK PLAY / STOP (FIX) =====
+  // ===== TRACK PLAY / STOP =====
   playBtn.onclick = async e => {
     e.stopPropagation();
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
 
+    activeTrackIndex = i;
     transportTime = 0;
     startPlayhead();
   };
 
   stopBtn.onclick = e => {
     e.stopPropagation();
+    activeTrackIndex = null;
     stopPlayhead();
     trackSources[i]?.stop();
     trackIsPlaying[i] = false;
@@ -567,7 +577,10 @@ tracks.forEach((track, i) => {
 
     const seconds =
       (newLeft / timeline.clientWidth) * beatsToSeconds(8);
-    offsetInput.value = secondsToBeats(seconds).toFixed(2);
+    const beats = secondsToBeats(seconds);
+
+    trackOffsets[i] = beats;
+    offsetInput.value = beats.toFixed(2);
   });
 
   document.addEventListener("mouseup", () => {
@@ -594,6 +607,7 @@ tracks.forEach((track, i) => {
     trackBuffers[i] = selectedLibraryItem.buffer;
     trackTrimStart[i] = 0;
     trackTrimEnd[i] = null;
+    trackOffsets[i] = 0;
 
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
     updateClipVisual();
