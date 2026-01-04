@@ -56,6 +56,10 @@ function updateTrackGains() {
 // =====================
 let BPM = 120;
 
+// transport time in seconds (MASTER CLOCK)
+let transportTime = 0;
+let isTransportRunning = false;
+
 function beatsToSeconds(beats) {
   return beats * (60 / BPM);
 }
@@ -66,13 +70,25 @@ function secondsToBeats(seconds) {
 
 function startPlayhead() {
   cancelAnimationFrame(playheadRAF);
-  playheadStartTime = audioContext.currentTime;
+
+  if (!audioContext) return;
+
+  const startContextTime = audioContext.currentTime;
+  const startTransportTime = transportTime;
+
+  isTransportRunning = true;
 
   function tick() {
-    if (playheadStartTime === null) return;
+    if (!isTransportRunning) return;
 
-    const elapsed =
-      audioContext.currentTime - playheadStartTime;
+    const now = audioContext.currentTime;
+    let elapsed = now - startContextTime;
+    transportTime = startTransportTime + elapsed;
+
+    // LOOP (transport-based)
+    if (loopEnabled && transportTime >= loopEnd) {
+      transportTime = loopStart;
+    }
 
     document.querySelectorAll(".timeline").forEach(timeline => {
       const playhead = timeline.querySelector(".playhead");
@@ -82,7 +98,7 @@ function startPlayhead() {
       const pxPerSecond = timeline.clientWidth / totalSeconds;
 
       const x = Math.min(
-        elapsed * pxPerSecond,
+        transportTime * pxPerSecond,
         timeline.clientWidth
       );
 
@@ -96,8 +112,9 @@ function startPlayhead() {
 }
 
 function stopPlayhead() {
-  playheadStartTime = null;
+  isTransportRunning = false;
   cancelAnimationFrame(playheadRAF);
+  transportTime = 0;
 
   document.querySelectorAll(".playhead").forEach(ph => {
     ph.style.left = "0px";
@@ -126,52 +143,24 @@ function initAudio() {
 playAllBtn.onclick = async () => {
   initAudio();
   await audioContext.resume();
-startPlayhead();
 
-  loopTimers.forEach((_, i) => stopLoopForTrack(i));
+  // reset transport
+  transportTime = 0;
 
-  tracks.forEach((track, i) => {
-    if (!trackBuffers[i]) return;
+  // stop all active audio sources
+  trackSources.forEach(src => src?.stop());
+  trackSources.fill(null);
 
-    trackSources[i]?.stop();
-
-    const offsetInput = track.querySelector(".track-offset");
-    const beatOffset = Number(offsetInput?.value) || 0;
-
-    const startTime =
-      audioContext.currentTime + beatsToSeconds(beatOffset);
-
-    const bufferDuration = trackBuffers[i].duration;
-
-    const trimStart = Math.max(0, trackTrimStart[i] || 0);
-    const rawTrimEnd =
-      trackTrimEnd[i] > 0 ? trackTrimEnd[i] : bufferDuration;
-
-    const trimEnd = Math.max(
-      trimStart + 0.01,
-      Math.min(rawTrimEnd, bufferDuration)
-    );
-
-    const src = audioContext.createBufferSource();
-    src.buffer = trackBuffers[i];
-    src.connect(trackGains[i]);
-    src.start(startTime, trimStart, trimEnd - trimStart);
-
-    trackSources[i] = src;
-
-    if (loopEnabled) startLoopForTrack(i);
-  });
+  startPlayhead();
 };
 
-stopPlayhead();
 stopAllBtn.onclick = () => {
-  stopPlayhead(); // ← HERE
+  stopPlayhead();
 
-  trackSources.forEach((src, i) => {
-    src?.stop();
-    stopLoopForTrack(i);
-  });
+  trackSources.forEach(src => src?.stop());
+  trackSources.fill(null);
 };
+
 
 // =====================
 // LOOP STATE (GLOBAL)
@@ -402,6 +391,9 @@ async function addToLibrary(file) {
 // =====================
 // TRACKS
 // =====================
+// per-track playback state
+const trackIsPlaying = [false, false, false];
+
 tracks.forEach((track, i) => {
   const label = track.querySelector(".track-label");
   const playBtn = track.querySelector(".track-play");
@@ -434,6 +426,8 @@ tracks.forEach((track, i) => {
     const visibleDuration = Math.max(0.01, trimEnd - trimStart);
     clip.style.width = visibleDuration * pxPerSecond + "px";
   }
+
+  // ===== UI CONTROLS (unchanged) =====
 
   slider.oninput = () => {
     trackFaders[i] = Number(slider.value);
@@ -468,50 +462,74 @@ tracks.forEach((track, i) => {
     };
   }
 
+  // ===== TRANSPORT-DRIVEN PLAYBACK =====
+
+  function updateTrackPlayback() {
+    if (!isTransportRunning || !trackBuffers[i]) return;
+
+    const beatOffset = Number(offsetInput.value) || 0;
+    const clipStart = beatsToSeconds(beatOffset);
+    const clipEnd =
+      clipStart +
+      (trackTrimEnd[i] > 0
+        ? trackTrimEnd[i] - (trackTrimStart[i] || 0)
+        : trackBuffers[i].duration);
+
+    const isInside =
+      transportTime >= clipStart && transportTime < clipEnd;
+
+    if (isInside && !trackIsPlaying[i]) {
+      const src = audioContext.createBufferSource();
+      src.buffer = trackBuffers[i];
+      src.connect(trackGains[i]);
+
+      const offset = transportTime - clipStart + (trackTrimStart[i] || 0);
+      src.start(0, offset);
+
+      trackSources[i] = src;
+      trackIsPlaying[i] = true;
+    }
+
+    if (!isInside && trackIsPlaying[i]) {
+      trackSources[i]?.stop();
+      trackSources[i] = null;
+      trackIsPlaying[i] = false;
+    }
+  }
+
+  // hook into animation frame
+  const originalRAF = requestAnimationFrame;
+  requestAnimationFrame(() => updateTrackPlayback());
+
+  // ===== BUTTONS =====
+
   playBtn.onclick = async () => {
     if (!trackBuffers[i]) return;
     if (audioContext.state !== "running") await audioContext.resume();
 
-    trackSources[i]?.stop();
-
+    transportTime = 0;
     startPlayhead();
-
-    const beatOffset = Number(offsetInput.value) || 0;
-    const startTime =
-      audioContext.currentTime + beatsToSeconds(beatOffset);
-
-    const bufferDuration = trackBuffers[i].duration;
-
-    const trimStart = Math.max(0, trackTrimStart[i] || 0);
-    const rawTrimEnd =
-      trackTrimEnd[i] > 0 ? trackTrimEnd[i] : bufferDuration;
-
-    const trimEnd = Math.max(
-      trimStart + 0.01,
-      Math.min(rawTrimEnd, bufferDuration)
-    );
-
-    const src = audioContext.createBufferSource();
-    src.buffer = trackBuffers[i];
-    src.connect(trackGains[i]);
-    src.start(startTime, trimStart, trimEnd - trimStart);
-
-trackSources[i] = src;
-
-if (loopEnabled) startLoopForTrack(i);
   };
 
   stopBtn.onclick = () => {
-  trackSources[i]?.stop();
-};
+    stopPlayhead();
+    trackSources[i]?.stop();
+    trackSources[i] = null;
+    trackIsPlaying[i] = false;
+  };
+
+  // ===== ASSIGN CLIP =====
 
   track.onclick = e => {
     if (!selectedLibraryItem) return;
     if (["BUTTON", "INPUT", "DIV"].includes(e.target.tagName)) return;
+
     trackBuffers[i] = selectedLibraryItem.buffer;
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
     updateClipVisual();
   };
+
+  // ===== DRAG CLIP (unchanged) =====
 
   let dragging = false;
   let startX = 0;
@@ -525,6 +543,7 @@ if (loopEnabled) startLoopForTrack(i);
 
   document.addEventListener("mousemove", e => {
     if (!dragging) return;
+
     let x = startLeft + (e.clientX - startX);
     x = Math.max(0, Math.min(x, timeline.clientWidth - clip.clientWidth));
     clip.style.left = x + "px";
