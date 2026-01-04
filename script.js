@@ -428,6 +428,7 @@ tracks.forEach((track, i) => {
   trackGains[i] = audioContext.createGain();
   trackGains[i].connect(masterGain);
 
+  // ===== CLIP VISUAL =====
   function updateClipVisual() {
     if (!trackBuffers[i]) return;
 
@@ -447,8 +448,7 @@ tracks.forEach((track, i) => {
     clip.style.left = leftPx + "px";
   }
 
-  // ===== UI CONTROLS (unchanged) =====
-
+  // ===== UI CONTROLS =====
   slider.oninput = () => {
     trackFaders[i] = Number(slider.value);
     updateTrackGains();
@@ -487,7 +487,6 @@ tracks.forEach((track, i) => {
     if (!isTransportRunning || !trackBuffers[i]) return;
 
     const bufferDuration = trackBuffers[i].duration;
-
     const trimStart = trackTrimStart[i] || 0;
     const trimEnd =
       trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
@@ -522,14 +521,63 @@ tracks.forEach((track, i) => {
     }
   }
 
-  // register this track's playback with the transport (ONCE)
   trackPlaybackCallbacks[i] = updateTrackPlayback;
+
+  // ===== TRACK PLAY / STOP (FIX) =====
+  playBtn.onclick = async e => {
+    e.stopPropagation();
+    if (!trackBuffers[i]) return;
+    if (audioContext.state !== "running") await audioContext.resume();
+
+    transportTime = 0;
+    startPlayhead();
+  };
+
+  stopBtn.onclick = e => {
+    e.stopPropagation();
+    stopPlayhead();
+    trackSources[i]?.stop();
+    trackIsPlaying[i] = false;
+  };
+
+  // ===== CLIP DRAG (TIME SHIFT) =====
+  let dragging = false;
+  let dragStartX = 0;
+  let dragStartLeft = 0;
+
+  clip.onmousedown = e => {
+    dragging = true;
+    dragStartX = e.clientX;
+    dragStartLeft = clip.offsetLeft;
+    e.preventDefault();
+  };
+
+  document.addEventListener("mousemove", e => {
+    if (!dragging) return;
+
+    const dx = e.clientX - dragStartX;
+    let newLeft = dragStartLeft + dx;
+
+    newLeft = Math.max(
+      0,
+      Math.min(newLeft, timeline.clientWidth - clip.clientWidth)
+    );
+
+    clip.style.left = newLeft + "px";
+
+    const seconds =
+      (newLeft / timeline.clientWidth) * beatsToSeconds(8);
+    offsetInput.value = secondsToBeats(seconds).toFixed(2);
+  });
+
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+  });
 
   // ===== ASSIGN SAMPLE FROM LIBRARY =====
   track.onclick = e => {
     if (!selectedLibraryItem) return;
 
-    // block only real controls
     if (
       e.target === playBtn ||
       e.target === stopBtn ||
