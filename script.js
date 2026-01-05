@@ -160,12 +160,12 @@ playAllBtn.onclick = async () => {
   initAudio();
   await audioContext.resume();
 
-  // reset transport
-  transportTime = 0;
+  // ❌ DO NOT reset transportTime here
+  // transportTime must preserve timeline seek
 
-  // stop all active audio sources
   trackSources.forEach(src => src?.stop());
   trackSources.fill(null);
+  trackIsPlaying.fill(false);
 
   startPlayhead();
 };
@@ -175,7 +175,9 @@ stopAllBtn.onclick = () => {
 
   trackSources.forEach(src => src?.stop());
   trackSources.fill(null);
+  trackIsPlaying.fill(false);
 };
+
 
 
 // =====================
