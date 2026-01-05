@@ -145,7 +145,7 @@ function clearRegionsExcept(keep) {
 waveSurfer.on("ready", () => {
   regions.enableDragSelection({
     color: "rgba(74,163,255,0.3)",
-    minLength: 0.05 // ⬅ PREVENT MICRO-REGIONS (50ms)
+    minLength: 0.05
   });
 });
 
@@ -158,16 +158,16 @@ regions.on("region-created", r => {
   });
 });
 
-// DAW-style loop playback only
-regions.on("region-out", r => {
-  waveSurfer.play(r.start, r.end);
+// ✅ SAFE looping (no recursion)
+waveSurfer.on("timeupdate", time => {
+  const region = Object.values(regions.getRegions())[0];
+  if (!region) return;
+
+  if (time >= region.end) {
+    waveSurfer.setTime(region.start);
+  }
 });
 
-
-// DAW-style loop: do NOT mutate region
-regions.on("region-out", region => {
-  waveSurfer.play(region.start, region.end);
-});
 
 // =====================
 // CLEAR REGION ON EMPTY WAVEFORM CLICK
