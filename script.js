@@ -16,11 +16,9 @@ const timeline = TimelinePlugin.create({
 const waveSurfer = WaveSurfer.create({
   container: "#waveform",
   height: 140,
-
   waveColor: "#4aa3ff",
   progressColor: "#1e6fd9",
   cursorColor: "#ffffff",
-
   normalize: false,
   fillParent: true,
 
@@ -88,6 +86,7 @@ muteBtn.onclick = () => {
     muteBtn.textContent = "Mute";
   }
 };
+
 // =====================
 // ZOOM
 // =====================
@@ -121,20 +120,17 @@ function clearRegionsExcept(keepRegion) {
 waveSurfer.on("ready", () => {
   regions.enableDragSelection({
     color: "rgba(74,163,255,0.3)",
-    minLength: 0,
-    maxLength: Infinity
+    minLength: 0
   });
 });
 
-// keep only the newest region
 regions.on("region-created", region => {
   clearRegionsExcept(region);
-  region.loop = true;
 });
 
-// loop playback
+// DAW-style loop: do NOT mutate region
 regions.on("region-out", region => {
-  if (region.loop) region.play();
+  waveSurfer.play(region.start, region.end);
 });
 
 // =====================
@@ -147,7 +143,6 @@ waveSurfer.on("click", () => {
 // =====================
 // EXPORT / BOUNCE
 // =====================
-
 const exportBtn = document.getElementById("export");
 
 exportBtn.onclick = () => {
@@ -204,7 +199,6 @@ exportBtn.onclick = () => {
 // =====================
 // WAV ENCODER (PCM 16-bit)
 // =====================
-
 function audioBufferToWav(buffer) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
@@ -248,7 +242,11 @@ function audioBufferToWav(buffer) {
     for (let ch = 0; ch < numChannels; ch++) {
       let sample = buffer.getChannelData(ch)[i];
       sample = Math.max(-1, Math.min(1, sample));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      view.setInt16(
+        offset,
+        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+        true
+      );
       offset += 2;
     }
   }
