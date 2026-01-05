@@ -148,6 +148,14 @@ regions.on("region-created", region => {
   clearRegionsExcept(region);
 });
 
+regions.on("region-created", r => {
+  console.log("REGION CREATED", {
+    start: r.start,
+    end: r.end,
+    duration: r.end - r.start
+  });
+});
+
 // DAW-style loop: do NOT mutate region
 regions.on("region-out", region => {
   waveSurfer.play(region.start, region.end);
@@ -188,6 +196,16 @@ exportBtn.onclick = () => {
   const startSample = Math.floor(region.start * sampleRate);
   const endSample = Math.floor(region.end * sampleRate);
   const length = endSample - startSample;
+
+console.log("REGION DEBUG", {
+  regionStart: region.start,
+  regionEnd: region.end,
+  regionDuration: region.end - region.start,
+  bufferDuration: buffer.duration,
+  sampleRate: buffer.sampleRate,
+  startSample: Math.floor(region.start * buffer.sampleRate),
+  endSample: Math.floor(region.end * buffer.sampleRate)
+});
 
   if (length <= 0) {
     alert("Invalid region length.");
