@@ -162,8 +162,15 @@ exportBtn.onclick = () => {
   }
 
   const sampleRate = buffer.sampleRate;
-  const startSample = Math.floor(region.start * sampleRate);
-  const endSample = Math.floor(region.end * sampleRate);
+  const bufferLength = buffer.length;
+
+  // --- CRITICAL FIX: clamp region to real PCM buffer ---
+  let startSample = Math.floor(region.start * sampleRate);
+  let endSample   = Math.floor(region.end * sampleRate);
+
+  startSample = Math.max(0, Math.min(startSample, bufferLength));
+  endSample   = Math.max(0, Math.min(endSample, bufferLength));
+
   const length = endSample - startSample;
 
   if (length <= 0) {
@@ -180,8 +187,9 @@ exportBtn.onclick = () => {
   });
 
   for (let ch = 0; ch < channelCount; ch++) {
-    const channelData = buffer.getChannelData(ch).slice(startSample, endSample);
-    slicedBuffer.copyToChannel(channelData, ch);
+    const sourceData = buffer.getChannelData(ch);
+    const slice = sourceData.subarray(startSample, endSample);
+    slicedBuffer.copyToChannel(slice, ch);
   }
 
   // encode WAV
