@@ -15,12 +15,21 @@ const timeline = TimelinePlugin.create({
 
 const waveSurfer = WaveSurfer.create({
   container: "#waveform",
-  height: 120,
+  height: 140,
+
   waveColor: "#4aa3ff",
   progressColor: "#1e6fd9",
   cursorColor: "#ffffff",
-  normalize: true,
-  minPxPerSec: 100,
+
+  normalize: false,
+  fillParent: true,
+
+  // maximum visual fidelity
+  minPxPerSec: 5,
+  barWidth: 1,
+  barGap: 0,
+  barRadius: 0,
+
   autoScroll: true,
   interact: true,
   plugins: [regions, timeline]
@@ -79,7 +88,6 @@ muteBtn.onclick = () => {
     muteBtn.textContent = "Mute";
   }
 };
-
 // =====================
 // ZOOM
 // =====================
@@ -88,11 +96,9 @@ const zoomSlider = document.getElementById("zoom");
 zoomSlider.oninput = e => {
   const sliderValue = Number(e.target.value);
 
-  // Exponential magnification (DAW-style)
-  // slider: 0–100
-  // px/sec: ~20 → ~20000
-  const minZoom = 20;
-  const maxZoom = 20000;
+  // push WaveSurfer to its ceiling
+  const minZoom = 5;        // overview
+  const maxZoom = 50000;    // extreme detail illusion
 
   const zoom =
     minZoom *
