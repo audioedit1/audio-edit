@@ -3,6 +3,8 @@
 // =====================
 const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
+
+// 🔧 FIX: use ONE canonical track collection
 const tracks = document.querySelectorAll(".track");
 
 const masterSlider = document.getElementById("masterGain");
@@ -15,6 +17,7 @@ const loopEnabledCheckbox = document.getElementById("loopEnabled");
 
 let playheadRAF = null;
 let playheadStartTime = null;
+
 
 // =====================
 // GLOBAL STATE
@@ -160,12 +163,13 @@ playAllBtn.onclick = async () => {
   initAudio();
   await audioContext.resume();
 
-  // reset transport
-  transportTime = 0;
+  // ❌ DO NOT reset transport here
+  // transportTime must remain as-is
 
-  // stop all active audio sources
+  // stop any currently playing sources
   trackSources.forEach(src => src?.stop());
   trackSources.fill(null);
+  trackIsPlaying.fill(false);
 
   startPlayhead();
 };
@@ -175,7 +179,9 @@ stopAllBtn.onclick = () => {
 
   trackSources.forEach(src => src?.stop());
   trackSources.fill(null);
+  trackIsPlaying.fill(false);
 };
+
 
 
 // =====================
@@ -474,7 +480,6 @@ tracks.forEach((track, i) => {
     updateTrackGains();
   };
 
-  // 🔴 FIX: offset input must update state
   offsetInput.oninput = () => {
     trackOffsets[i] = Math.max(0, Number(offsetInput.value) || 0);
     updateClipVisual();
@@ -494,52 +499,47 @@ tracks.forEach((track, i) => {
     };
   }
 
- // ===== TRANSPORT-DRIVEN PLAYBACK =====
-function updateTrackPlayback() {
-  if (!isTransportRunning || !trackBuffers[i]) return;
-  if (activeTrackIndex !== null && activeTrackIndex !== i) return;
+  // ===== TRANSPORT-DRIVEN PLAYBACK =====
+  function updateTrackPlayback() {
+    if (!isTransportRunning || !trackBuffers[i]) return;
+    if (activeTrackIndex !== null && activeTrackIndex !== i) return;
 
-  const bufferDuration = trackBuffers[i].duration;
+    const bufferDuration = trackBuffers[i].duration;
+    const trimStart = trackTrimStart[i] || 0;
+    const trimEnd =
+      trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
 
-  const trimStart = trackTrimStart[i] || 0;
-  const trimEnd =
-    trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
+    const clipStart = beatsToSeconds(trackOffsets[i] || 0);
+    const clipDuration = Math.max(0.01, trimEnd - trimStart);
+    const clipEnd = clipStart + clipDuration;
 
-  const clipStart = beatsToSeconds(trackOffsets[i] || 0);
-  const clipDuration = Math.max(0.01, trimEnd - trimStart);
-  const clipEnd = clipStart + clipDuration;
+    const isInside =
+      transportTime >= clipStart && transportTime < clipEnd;
 
-  const isInside =
-    transportTime >= clipStart && transportTime < clipEnd;
+    if (isInside && !trackIsPlaying[i]) {
+      const src = audioContext.createBufferSource();
+      src.buffer = trackBuffers[i];
+      src.connect(trackGains[i]);
 
-  if (isInside && !trackIsPlaying[i]) {
-    const src = audioContext.createBufferSource();
-    src.buffer = trackBuffers[i];
-    src.connect(trackGains[i]);
+      const transportOffset = transportTime - clipStart;
+      const bufferOffset = trimStart + transportOffset;
 
-    // transport-relative position inside clip
-    const transportOffset = transportTime - clipStart;
+      const startAt = audioContext.currentTime;
+      const remaining = clipEnd - transportTime;
 
-    // absolute position inside audio buffer
-    const bufferOffset = trimStart + transportOffset;
+      src.start(startAt, bufferOffset, remaining);
+      src.stop(startAt + remaining);
 
-    // align playback to AudioContext clock
-    const startAt = audioContext.currentTime;
-    const remaining = clipEnd - transportTime;
+      trackSources[i] = src;
+      trackIsPlaying[i] = true;
+    }
 
-    src.start(startAt, bufferOffset, remaining);
-    src.stop(startAt + remaining);
-
-    trackSources[i] = src;
-    trackIsPlaying[i] = true;
+    if (!isInside && trackIsPlaying[i]) {
+      trackSources[i]?.stop();
+      trackSources[i] = null;
+      trackIsPlaying[i] = false;
+    }
   }
-
-  if (!isInside && trackIsPlaying[i]) {
-    trackSources[i]?.stop();
-    trackSources[i] = null;
-    trackIsPlaying[i] = false;
-  }
-}
 
   trackPlaybackCallbacks[i] = updateTrackPlayback;
 
@@ -550,7 +550,10 @@ function updateTrackPlayback() {
     if (audioContext.state !== "running") await audioContext.resume();
 
     activeTrackIndex = i;
+
+    // 🔧 SEEK transport, do NOT reset it
     transportTime = beatsToSeconds(trackOffsets[i] || 0);
+
     startPlayhead();
   };
 
@@ -578,7 +581,10 @@ function updateTrackPlayback() {
     if (!dragging) return;
 
     let newLeft = dragStartLeft + (e.clientX - dragStartX);
-    newLeft = Math.max(0, Math.min(newLeft, timeline.clientWidth - clip.clientWidth));
+    newLeft = Math.max(
+      0,
+      Math.min(newLeft, timeline.clientWidth - clip.clientWidth)
+    );
 
     clip.style.left = newLeft + "px";
 
@@ -620,6 +626,7 @@ function updateTrackPlayback() {
     updateClipVisual();
   };
 });
+
 
 // =====================
 // LOOP HANDLE DRAG
