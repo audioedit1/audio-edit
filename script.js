@@ -120,7 +120,8 @@ function clearRegionsExcept(keepRegion) {
 
 waveSurfer.on("ready", () => {
   regions.enableDragSelection({
-    color: "rgba(74,163,255,0.3)"
+    color: "rgba(74,163,255,0.3)",
+    minLength: 0
   });
 });
 
