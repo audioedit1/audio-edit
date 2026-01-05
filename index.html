@@ -2,11 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>WaveSurfer Minimal Editor</title>
+  <title>Minimal WaveSurfer Editor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- WaveSurfer CDN -->
-  <script src="https://unpkg.com/wavesurfer.js@7"></script>
 
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -14,14 +11,17 @@
 
   <h1>Minimal Audio Editor</h1>
 
-  <!-- Controls -->
-  <input type="file" id="fileInput" accept="audio/*" />
-  <button id="play">Play / Pause</button>
-  <button id="stop">Stop</button>
+  <!-- CONTROLS -->
+  <div class="controls">
+    <input type="file" id="fileInput" accept="audio/*" />
+    <button id="play">Play / Pause</button>
+    <button id="stop">Stop</button>
+  </div>
 
-  <!-- Waveform -->
+  <!-- WAVEFORM -->
   <div id="waveform"></div>
 
-  <script src="script.js"></script>
+  <!-- SCRIPT -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>
