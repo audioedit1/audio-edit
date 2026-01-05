@@ -202,8 +202,13 @@ exportBtn.onclick = () => {
 function audioBufferToWav(buffer) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
-  const length = buffer.length * numChannels * 2 + 44;
-  const arrayBuffer = new ArrayBuffer(length);
+
+  const bytesPerSample = 2;
+  const blockAlign = numChannels * bytesPerSample;
+  const dataSize = buffer.length * blockAlign;
+  const bufferSize = 44 + dataSize;
+
+  const arrayBuffer = new ArrayBuffer(bufferSize);
   const view = new DataView(arrayBuffer);
 
   let offset = 0;
@@ -224,20 +229,26 @@ function audioBufferToWav(buffer) {
     offset += 2;
   }
 
+  // RIFF header
   writeString("RIFF");
-  writeUint32(length - 8);
+  writeUint32(36 + dataSize);
   writeString("WAVE");
+
+  // fmt chunk
   writeString("fmt ");
   writeUint32(16);
   writeUint16(1);
   writeUint16(numChannels);
   writeUint32(sampleRate);
-  writeUint32(sampleRate * numChannels * 2);
-  writeUint16(numChannels * 2);
+  writeUint32(sampleRate * blockAlign);
+  writeUint16(blockAlign);
   writeUint16(16);
-  writeString("data");
-  writeUint32(length - offset - 4);
 
+  // data chunk
+  writeString("data");
+  writeUint32(dataSize);
+
+  // PCM samples
   for (let i = 0; i < buffer.length; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
       let sample = buffer.getChannelData(ch)[i];
@@ -251,5 +262,5 @@ function audioBufferToWav(buffer) {
     }
   }
 
-  return new Blob([view], { type: "audio/wav" });
+  return new Blob([arrayBuffer], { type: "audio/wav" });
 }
