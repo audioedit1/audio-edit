@@ -20,12 +20,11 @@ const waveSurfer = WaveSurfer.create({
   progressColor: "#1e6fd9",
   cursorColor: "#ffffff",
   normalize: true,
-  minPxPerSec: 20,
+  minPxPerSec: 100,
   autoScroll: true,
   interact: true,
   plugins: [regions, timeline]
 });
-
 
 // =====================
 // FILE LOAD
@@ -87,12 +86,19 @@ muteBtn.onclick = () => {
 const zoomSlider = document.getElementById("zoom");
 
 zoomSlider.oninput = e => {
-  const value = Number(e.target.value);
+  const sliderValue = Number(e.target.value);
 
-  // DAW-style zoom range
-  // 20  -> overview
-  // 8000+ -> sample-level view
-  waveSurfer.zoom(value);
+  // Exponential magnification (DAW-style)
+  // slider: 0–100
+  // px/sec: ~20 → ~20000
+  const minZoom = 20;
+  const maxZoom = 20000;
+
+  const zoom =
+    minZoom *
+    Math.pow(maxZoom / minZoom, sliderValue / 100);
+
+  waveSurfer.zoom(zoom);
 };
 
 // =====================
