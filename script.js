@@ -2,6 +2,8 @@ import WaveSurfer from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
 import RegionsPlugin from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/regions.esm.js";
 import TimelinePlugin from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/timeline.esm.js";
 
+let frozenDecodedBuffer = null;
+
 // =====================
 // WAVESURFER INIT
 // =====================
@@ -118,6 +120,9 @@ function clearRegionsExcept(keepRegion) {
 }
 
 waveSurfer.on("ready", () => {
+  // Freeze decoded buffer for offline render
+  frozenDecodedBuffer = waveSurfer.getDecodedData();
+
   regions.enableDragSelection({
     color: "rgba(74,163,255,0.3)",
     minLength: 0
@@ -154,22 +159,22 @@ exportBtn.onclick = () => {
   }
 
   const region = regionList[0];
+  const buffer = frozenDecodedBuffer;
 
-  const buffer = waveSurfer.getDecodedData();
+
   if (!buffer) {
     alert("Audio not ready.");
     return;
   }
 
   const sampleRate = buffer.sampleRate;
-  const bufferLength = buffer.length;
+  const channelCount = buffer.numberOfChannels;
 
-  // --- CRITICAL FIX: clamp region to real PCM buffer ---
   let startSample = Math.floor(region.start * sampleRate);
   let endSample   = Math.floor(region.end * sampleRate);
 
-  startSample = Math.max(0, Math.min(startSample, bufferLength));
-  endSample   = Math.max(0, Math.min(endSample, bufferLength));
+  startSample = Math.max(0, startSample);
+  endSample   = Math.min(buffer.length, endSample);
 
   const length = endSample - startSample;
 
@@ -178,47 +183,36 @@ exportBtn.onclick = () => {
     return;
   }
 
-  // slice PCM data
-  const channelCount = buffer.numberOfChannels;
-  const slicedBuffer = new AudioBuffer({
-    length,
-    numberOfChannels: channelCount,
-    sampleRate
-  });
+  // ---- DIRECT WAV ENCODE (NO AudioBuffer) ----
+  const wavBlob = encodeWavFromRegion(
+    buffer,
+    startSample,
+    length
+  );
 
-  for (let ch = 0; ch < channelCount; ch++) {
-    const sourceData = buffer.getChannelData(ch);
-    const slice = sourceData.subarray(startSample, endSample);
-    slicedBuffer.copyToChannel(slice, ch);
-  }
-
-  // encode WAV
-  const wavBlob = audioBufferToWav(slicedBuffer);
   const url = URL.createObjectURL(wavBlob);
-
   const a = document.createElement("a");
   a.href = url;
   a.download = "export.wav";
   a.click();
-
   URL.revokeObjectURL(url);
 };
 
 // =====================
 // WAV ENCODER (PCM 16-bit)
 // =====================
-function audioBufferToWav(buffer) {
+function encodeWavFromRegion(buffer, startSample, length) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
 
+  // 16-bit PCM
   const bytesPerSample = 2;
   const blockAlign = numChannels * bytesPerSample;
-  const dataSize = buffer.length * blockAlign;
+  const dataSize = length * blockAlign;
   const bufferSize = 44 + dataSize;
 
   const arrayBuffer = new ArrayBuffer(bufferSize);
   const view = new DataView(arrayBuffer);
-
   let offset = 0;
 
   function writeString(str) {
@@ -237,30 +231,33 @@ function audioBufferToWav(buffer) {
     offset += 2;
   }
 
-  // RIFF header
+  // ---- RIFF HEADER ----
   writeString("RIFF");
   writeUint32(36 + dataSize);
   writeString("WAVE");
 
-  // fmt chunk
+  // ---- fmt CHUNK ----
   writeString("fmt ");
-  writeUint32(16);
-  writeUint16(1);
+  writeUint32(16);              // PCM
+  writeUint16(1);               // format = PCM
   writeUint16(numChannels);
   writeUint32(sampleRate);
   writeUint32(sampleRate * blockAlign);
   writeUint16(blockAlign);
-  writeUint16(16);
+  writeUint16(16);              // bits per sample
 
-  // data chunk
+  // ---- data CHUNK ----
   writeString("data");
   writeUint32(dataSize);
 
-  // PCM samples
-  for (let i = 0; i < buffer.length; i++) {
+  // ---- PCM DATA ----
+  for (let i = 0; i < length; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
-      let sample = buffer.getChannelData(ch)[i];
+      let sample = buffer.getChannelData(ch)[startSample + i];
+
+      // clamp
       sample = Math.max(-1, Math.min(1, sample));
+
       view.setInt16(
         offset,
         sample < 0 ? sample * 0x8000 : sample * 0x7fff,
