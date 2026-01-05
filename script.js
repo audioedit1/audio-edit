@@ -111,9 +111,11 @@ zoomSlider.oninput = e => {
 // REGIONS (SELECTION / CLIPS)
 // =====================
 
-// helper: remove all regions
-function clearRegions() {
-  Object.values(regions.getRegions()).forEach(r => r.remove());
+// helper: remove all regions except one
+function clearRegionsExcept(keepRegion) {
+  Object.values(regions.getRegions()).forEach(r => {
+    if (r !== keepRegion) r.remove();
+  });
 }
 
 waveSurfer.on("ready", () => {
@@ -122,20 +124,28 @@ waveSurfer.on("ready", () => {
   });
 });
 
-// when a new region is created → remove old ones
+// keep only the newest region
 regions.on("region-created", region => {
-  clearRegions();          // remove previous
+  clearRegionsExcept(region);
   region.loop = true;
 });
 
-// loop behavior
+// loop playback
 regions.on("region-out", region => {
   if (region.loop) region.play();
 });
 
 // =====================
-// CLEAR REGION ON WAVEFORM CLICK
+// CLEAR REGION ON EMPTY WAVEFORM CLICK
 // =====================
-waveSurfer.on("interaction", () => {
+waveSurfer.on("click", () => {
   Object.values(regions.getRegions()).forEach(r => r.remove());
 });
+
+// =====================
+// CLEAR REGION ON EMPTY WAVEFORM CLICK
+// =====================
+waveSurfer.on("click", () => {
+  Object.values(regions.getRegions()).forEach(r => r.remove());
+});
+Z
