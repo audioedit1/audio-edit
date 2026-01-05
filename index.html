@@ -2,225 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Audio Edit</title>
+  <title>Web DAW – Audio Edits Core</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- WaveSurfer -->
+  <script type="module" src="script.js"></script>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- =====================
-       HEADER
-  ====================== -->
-  <header>
-    <h1>Audio Edit</h1>
-    <p>Upload, arrange, and mix sounds in your browserssssssssssss.</p>
-  </header>
+  <h1>Web DAW – Editorsssss Core</h1>
 
-  <!-- =====================
-       MASTER
-  ====================== -->
-  <section class="master">
-    <h2>Master</h2>
+  <!-- Transport -->
+  <div class="controls">
+    <input type="file" id="fileInput" accept="audio/*" />
+
+    <button id="play">Play / Pause</button>
+    <button id="stop">Stop</button>
+
     <label>
       Volume
-      <input
-        type="range"
-        id="masterGain"
-        min="0"
-        max="1"
-        step="0.01"
-        value="0.9"
-      />
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
     </label>
-  </section>
 
-  <!-- =====================
-       TRANSPORT
-  ====================== -->
-  <section class="transport">
-    <button id="playAll">Play</button>
-    <button id="stopAll">Stop</button>
+    <button id="mute">Mute</button>
 
-    <div class="loop-controls">
-      <label>
-        Loop A (beats)
-        <input type="number" id="loopStart" min="0" step="0.1" value="0" />
-      </label>
+    <label>
+      Zoom
+      <input type="range" id="zoom" min="0" max="100" step="1" value="35" />
+    </label>
 
-      <label>
-        Loop B (beats)
-        <input type="number" id="loopEnd" min="0" step="0.1" value="4" />
-      </label>
+    <!-- EXPORT -->
+    <button id="export">Export Region</button>
+  </div>
 
-      <label>
-        <input type="checkbox" id="loopEnabled" />
-        Loop
-      </label>
-    </div>
-  </section>
+  <!-- Timeline -->
+  <div id="timeline"></div>
 
-  <!-- =====================
-       TRACKS
-  ====================== -->
-  <main>
-    <section class="editor">
-      <h2>Tracks</h2>
+  <!-- Waveform -->
+  <div id="waveform"></div>
 
-      <!-- TRACK TEMPLATE -->
-      <!-- Track 1 -->
-      <div class="track" data-track="0">
-        <span class="track-label">Track 1 (empty)</span>
-
-        <button class="track-mute">Mute</button>
-        <button class="track-solo">Solo</button>
-
-        <input
-          type="range"
-          class="track-gain"
-          min="0"
-          max="1"
-          step="0.01"
-          value="1"
-        />
-
-        <label class="offset">
-          Start (beats)
-          <input
-            type="number"
-            class="track-offset"
-            min="0"
-            step="0.1"
-            value="0"
-          />
-        </label>
-
-        <label class="trim">
-          Trim In (s)
-          <input
-            type="number"
-            class="track-trim-start"
-            min="0"
-            step="0.01"
-            value="0"
-          />
-        </label>
-
-        <label class="trim">
-          Trim Out (s)
-          <input
-            type="number"
-            class="track-trim-end"
-            min="0"
-            step="0.01"
-            value="0"
-          />
-        </label>
-
-        <div class="timeline">
-          <div class="loop-region"></div>
-          <div class="loop-handle loop-start"></div>
-          <div class="loop-handle loop-end"></div>
-          <div class="playhead"></div>
-          <div class="clip"></div>
-        </div>
-
-        <button class="track-play">Play</button>
-        <button class="track-stop">Stop</button>
-      </div>
-
-      <!-- Track 2 -->
-      <div class="track" data-track="1">
-        <span class="track-label">Track 2 (empty)</span>
-
-        <button class="track-mute">Mute</button>
-        <button class="track-solo">Solo</button>
-
-        <input
-          type="range"
-          class="track-gain"
-          min="0"
-          max="1"
-          step="0.01"
-          value="1"
-        />
-
-        <label class="offset">
-          Start (beats)
-          <input
-            type="number"
-            class="track-offset"
-            min="0"
-            step="0.1"
-            value="0"
-          />
-        </label>
-
-        <div class="timeline">
-          <div class="loop-region"></div>
-          <div class="loop-handle loop-start"></div>
-          <div class="loop-handle loop-end"></div>
-          <div class="playhead"></div>
-          <div class="clip"></div>
-        </div>
-
-        <button class="track-play">Play</button>
-        <button class="track-stop">Stop</button>
-      </div>
-
-      <!-- Track 3 -->
-      <div class="track" data-track="2">
-        <span class="track-label">Track 3 (empty)</span>
-
-        <button class="track-mute">Mute</button>
-        <button class="track-solo">Solo</button>
-
-        <input
-          type="range"
-          class="track-gain"
-          min="0"
-          max="1"
-          step="0.01"
-          value="1"
-        />
-
-        <label class="offset">
-          Start (beats)
-          <input
-            type="number"
-            class="track-offset"
-            min="0"
-            step="0.1"
-            value="0"
-          />
-        </label>
-
-        <div class="timeline">
-          <div class="loop-region"></div>
-          <div class="loop-handle loop-start"></div>
-          <div class="loop-handle loop-end"></div>
-          <div class="playhead"></div>
-          <div class="clip"></div>
-        </div>
-
-        <button class="track-play">Play</button>
-        <button class="track-stop">Stop</button>
-      </div>
-    </section>
-  </main>
-
-  <!-- =====================
-       SOUND LIBRARY
-  ====================== -->
-  <section class="upload-section">
-    <h2>Sound Library</h2>
-
-    <input type="file" id="fileInput" accept="audio/*" multiple />
-    <ul id="fileList"></ul>
-  </section>
-
-  <!-- =====================
-       SCRIPT
-  ====================== -->
-  <script src="script.js"></script>
 </body>
 </html>
