@@ -183,6 +183,16 @@ exportBtn.onclick = () => {
     return;
   }
 
+  console.log({
+  bufferDuration: frozenDecodedBuffer.duration,
+  bufferLength: frozenDecodedBuffer.length,
+  regionStart: region.start,
+  regionEnd: region.end,
+  startSample,
+  endSample,
+  length
+});
+
   // ---- DIRECT WAV ENCODE (NO AudioBuffer) ----
   const wavBlob = encodeWavFromRegion(
     buffer,
