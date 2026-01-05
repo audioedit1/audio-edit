@@ -1,4 +1,5 @@
-import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js';
+import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js'
+import RegionsPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/regions.esm.js'
 
 // =====================
 // WAVESURFER INIT
@@ -10,46 +11,54 @@ const waveSurfer = WaveSurfer.create({
   cursorColor: '#ffffff',
   height: 100,
   responsive: true,
-});
+  plugins: [
+    RegionsPlugin.create({
+      dragSelection: true,
+    }),
+  ],
+})
 
 // =====================
 // FILE UPLOAD
 // =====================
-const fileInput = document.getElementById('fileInput');
+const fileInput = document.getElementById('fileInput')
 
 fileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const file = e.target.files[0]
+  if (!file) return
 
-  // revoke previous object URL if any
   if (waveSurfer._objectUrl) {
-    URL.revokeObjectURL(waveSurfer._objectUrl);
+    URL.revokeObjectURL(waveSurfer._objectUrl)
   }
 
-  const url = URL.createObjectURL(file);
-  waveSurfer._objectUrl = url;
-
-  waveSurfer.load(url);
-});
+  const url = URL.createObjectURL(file)
+  waveSurfer._objectUrl = url
+  waveSurfer.load(url)
+})
 
 // =====================
 // TRANSPORT
 // =====================
 document.getElementById('play').onclick = () => {
-  waveSurfer.playPause();
-};
+  waveSurfer.playPause()
+}
 
 document.getElementById('stop').onclick = () => {
-  waveSurfer.stop();
-};
+  waveSurfer.stop()
+}
 
 // =====================
-// DEBUG (OPTIONAL, SAFE)
+// REGIONS EVENTS
 // =====================
-waveSurfer.on('ready', () => {
-  console.log('WaveSurfer ready');
-});
+waveSurfer.on('region-created', region => {
+  console.log('Region created:', region.start, region.end)
+})
 
-waveSurfer.on('seek', progress => {
-  console.log('Seek:', progress);
-});
+waveSurfer.on('region-updated', region => {
+  console.log('Region updated:', region.start, region.end)
+})
+
+waveSurfer.on('region-clicked', (region, e) => {
+  e.stopPropagation()
+  region.play()
+})
