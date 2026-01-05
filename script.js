@@ -56,15 +56,28 @@ document.getElementById("stop").onclick = () => waveSurfer.stop();
 const volumeSlider = document.getElementById("volume");
 const muteBtn = document.getElementById("mute");
 
+let lastVolume = Number(volumeSlider.value);
+let muted = false;
+
 volumeSlider.oninput = e => {
-  waveSurfer.setVolume(Number(e.target.value));
+  const value = Number(e.target.value);
+  lastVolume = value;
+
+  if (!muted) {
+    waveSurfer.setVolume(value);
+  }
 };
 
-let muted = false;
 muteBtn.onclick = () => {
   muted = !muted;
-  waveSurfer.setMute(muted);
-  muteBtn.textContent = muted ? "Unmute" : "Mute";
+
+  if (muted) {
+    waveSurfer.setVolume(0);
+    muteBtn.textContent = "Unmute";
+  } else {
+    waveSurfer.setVolume(lastVolume);
+    muteBtn.textContent = "Mute";
+  }
 };
 
 // =====================
