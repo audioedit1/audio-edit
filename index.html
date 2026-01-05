@@ -2,26 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Minimal Audio Editor</title>
+  <title>Web DAW – WaveSurfer Core</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- WaveSurfer -->
+  <script type="module" src="script.js"></script>
 
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <h1>Minimal Audio Editor</h1>
+  <h1>Web DAW – Editor Core</h1>
 
-  <!-- CONTROLS -->
+  <!-- Transport -->
   <div class="controls">
     <input type="file" id="fileInput" accept="audio/*" />
     <button id="play">Play / Pause</button>
     <button id="stop">Stop</button>
+
+    <label>
+      Volume
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
+    </label>
+
+    <button id="mute">Mute</button>
+
+    <label>
+      Zoom
+      <input type="range" id="zoom" min="20" max="500" step="10" value="100" />
+    </label>
   </div>
 
-  <!-- WAVEFORM -->
+  <!-- Timeline -->
+  <div id="timeline"></div>
+
+  <!-- Waveform -->
   <div id="waveform"></div>
 
-  <!-- SCRIPT -->
-  <script type="module" src="script.js"></script>
 </body>
 </html>

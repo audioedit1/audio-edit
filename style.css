@@ -1,15 +1,54 @@
 body {
-  font-family: sans-serif;
+  font-family: system-ui, sans-serif;
+  background: #0e0e0e;
+  color: #ffffff;
   padding: 20px;
 }
 
+h1 {
+  margin-bottom: 10px;
+}
+
 .controls {
-  margin-bottom: 15px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+button {
+  background: #1e6fd9;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2c84ff;
+}
+
+label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+input[type="range"] {
+  width: 120px;
 }
 
 #waveform {
-  width: 100%;
-  height: 120px;
+  height: 140px;
   background: #111;
-  cursor: pointer;
+  margin-top: 10px;
+}
+
+#region-info {
+  margin-top: 10px;
+}
+
+#timeline {
+  height: 30px;
 }
