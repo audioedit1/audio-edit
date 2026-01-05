@@ -5,8 +5,17 @@ import TimelinePlugin from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/pl
 // =====================
 // OFFLINE DECODE (EXPORT SOURCE)
 // =====================
-const exportAudioContext = new AudioContext();
+let exportAudioContext = null;
 let originalDecodedBuffer = null;
+
+function ensureExportContext() {
+  if (!exportAudioContext) {
+    exportAudioContext = new AudioContext();
+  }
+  if (exportAudioContext.state === "suspended") {
+    exportAudioContext.resume();
+  }
+}
 
 // =====================
 // WAVESURFER INIT
@@ -44,31 +53,29 @@ const waveSurfer = WaveSurfer.create({
 // =====================
 const fileInput = document.getElementById("fileInput");
 
-fileInput.addEventListener("change", e => {
+fileInput.addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
+
+  ensureExportContext();
 
   if (waveSurfer._objectUrl) {
     URL.revokeObjectURL(waveSurfer._objectUrl);
   }
 
-  // ↓↓↓ THIS IS WHERE IT GOES ↓↓↓
   const url = URL.createObjectURL(file);
   waveSurfer._objectUrl = url;
   waveSurfer.load(url);
 
-  // DAW-safe decode for export
-  file.arrayBuffer()
-    .then(arrayBuffer => exportAudioContext.decodeAudioData(arrayBuffer))
-    .then(decoded => {
-      originalDecodedBuffer = decoded;
-      console.log("Export buffer decoded:", {
-        sampleRate: decoded.sampleRate,
-        length: decoded.length,
-        duration: decoded.duration
-      });
-    });
-  // ↑↑↑ END ↑↑↑
+  // DAW-SAFE decode (export source of truth)
+  const arrayBuffer = await file.arrayBuffer();
+  originalDecodedBuffer = await exportAudioContext.decodeAudioData(arrayBuffer);
+
+  console.log("EXPORT BUFFER OK", {
+    sampleRate: originalDecodedBuffer.sampleRate,
+    duration: originalDecodedBuffer.duration,
+    length: originalDecodedBuffer.length
+  });
 });
 
 // =====================
@@ -129,32 +136,33 @@ zoomSlider.oninput = e => {
 // =====================
 // REGIONS (SELECTION / CLIPS)
 // =====================
-
-// helper: remove all regions except one
-function clearRegionsExcept(keepRegion) {
+function clearRegionsExcept(keep) {
   Object.values(regions.getRegions()).forEach(r => {
-    if (r !== keepRegion) r.remove();
+    if (r !== keep) r.remove();
   });
 }
 
 waveSurfer.on("ready", () => {
   regions.enableDragSelection({
     color: "rgba(74,163,255,0.3)",
-    minLength: 0
+    minLength: 0.05 // ⬅ PREVENT MICRO-REGIONS (50ms)
   });
 });
 
-regions.on("region-created", region => {
-  clearRegionsExcept(region);
-});
-
 regions.on("region-created", r => {
+  clearRegionsExcept(r);
   console.log("REGION CREATED", {
     start: r.start,
     end: r.end,
     duration: r.end - r.start
   });
 });
+
+// DAW-style loop playback only
+regions.on("region-out", r => {
+  waveSurfer.play(r.start, r.end);
+});
+
 
 // DAW-style loop: do NOT mutate region
 regions.on("region-out", region => {
@@ -175,69 +183,41 @@ const exportBtn = document.getElementById("export");
 
 exportBtn.onclick = () => {
   const regionList = Object.values(regions.getRegions());
-
   if (regionList.length !== 1) {
-    alert("Please select exactly one region to export.");
+    console.log("NO REGION");
     return;
   }
 
   const region = regionList[0];
-
-  // ✅ SOURCE OF TRUTH
   const buffer = originalDecodedBuffer;
 
-  // ✅ GUARD
-  if (!buffer) {
-    alert("Audio not decoded yet.");
-    return;
-  }
-
-  const sampleRate = buffer.sampleRate;
-  const startSample = Math.floor(region.start * sampleRate);
-  const endSample = Math.floor(region.end * sampleRate);
-  const length = endSample - startSample;
-
-console.log("REGION DEBUG", {
-  regionStart: region.start,
-  regionEnd: region.end,
-  regionDuration: region.end - region.start,
-  bufferDuration: buffer.duration,
-  sampleRate: buffer.sampleRate,
-  startSample: Math.floor(region.start * buffer.sampleRate),
-  endSample: Math.floor(region.end * buffer.sampleRate)
-});
-
-  if (length <= 0) {
-    alert("Invalid region length.");
-    return;
-  }
-
-  // slice PCM data
-  const channelCount = buffer.numberOfChannels;
-  const slicedBuffer = new AudioBuffer({
-    length,
-    numberOfChannels: channelCount,
-    sampleRate
+  console.log("BUFFER STATE", {
+    exists: !!buffer,
+    duration: buffer?.duration,
+    sampleRate: buffer?.sampleRate
   });
 
-  for (let ch = 0; ch < channelCount; ch++) {
-    const channelData = buffer
-      .getChannelData(ch)
-      .slice(startSample, endSample);
-    slicedBuffer.copyToChannel(channelData, ch);
-  }
+  const startSample = Math.floor(region.start * buffer.sampleRate);
+  const endSample = Math.floor(region.end * buffer.sampleRate);
 
-  // encode WAV
-  const wavBlob = audioBufferToWav(slicedBuffer);
-  const url = URL.createObjectURL(wavBlob);
+  console.log("SLICE INFO", {
+    regionStart: region.start,
+    regionEnd: region.end,
+    startSample,
+    endSample,
+    length: endSample - startSample
+  });
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "export.wav";
-  a.click();
+  const testSlice = buffer
+    .getChannelData(0)
+    .slice(startSample, endSample);
 
-  URL.revokeObjectURL(url);
+  console.log("SLICE RESULT", {
+    sliceLength: testSlice.length,
+    firstSamples: testSlice.slice(0, 10)
+  });
 };
+
 
 // =====================
 // WAV ENCODER (PCM 16-bit)
