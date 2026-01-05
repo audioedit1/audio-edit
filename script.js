@@ -191,33 +191,47 @@ exportBtn.onclick = () => {
   const region = regionList[0];
   const buffer = originalDecodedBuffer;
 
-  console.log("BUFFER STATE", {
-    exists: !!buffer,
-    duration: buffer?.duration,
-    sampleRate: buffer?.sampleRate
+  if (!buffer) {
+    alert("Audio not decoded yet.");
+    return;
+  }
+
+  const sampleRate = buffer.sampleRate;
+  const startSample = Math.floor(region.start * sampleRate);
+  const endSample = Math.floor(region.end * sampleRate);
+  const length = endSample - startSample;
+
+  if (length <= 0) {
+    alert("Invalid region length.");
+    return;
+  }
+
+  // slice PCM data
+  const channelCount = buffer.numberOfChannels;
+  const slicedBuffer = new AudioBuffer({
+    length,
+    numberOfChannels: channelCount,
+    sampleRate
   });
 
-  const startSample = Math.floor(region.start * buffer.sampleRate);
-  const endSample = Math.floor(region.end * buffer.sampleRate);
+  for (let ch = 0; ch < channelCount; ch++) {
+    slicedBuffer.copyToChannel(
+      buffer.getChannelData(ch).slice(startSample, endSample),
+      ch
+    );
+  }
 
-  console.log("SLICE INFO", {
-    regionStart: region.start,
-    regionEnd: region.end,
-    startSample,
-    endSample,
-    length: endSample - startSample
-  });
+  // encode WAV
+  const wavBlob = audioBufferToWav(slicedBuffer);
+  const url = URL.createObjectURL(wavBlob);
 
-  const testSlice = buffer
-    .getChannelData(0)
-    .slice(startSample, endSample);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "export.wav";
+  a.click();
 
-  console.log("SLICE RESULT", {
-    sliceLength: testSlice.length,
-    firstSamples: testSlice.slice(0, 10)
-  });
+  URL.revokeObjectURL(url);
 };
-
 
 // =====================
 // WAV ENCODER (PCM 16-bit)
