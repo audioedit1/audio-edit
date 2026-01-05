@@ -121,7 +121,8 @@ function clearRegionsExcept(keepRegion) {
 waveSurfer.on("ready", () => {
   regions.enableDragSelection({
     color: "rgba(74,163,255,0.3)",
-    minLength: 0
+    minLength: 0,
+    maxLength: Infinity
   });
 });
 
@@ -134,13 +135,6 @@ regions.on("region-created", region => {
 // loop playback
 regions.on("region-out", region => {
   if (region.loop) region.play();
-});
-
-// =====================
-// CLEAR REGION ON EMPTY WAVEFORM CLICK
-// =====================
-waveSurfer.on("click", () => {
-  Object.values(regions.getRegions()).forEach(r => r.remove());
 });
 
 // =====================
