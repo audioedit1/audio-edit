@@ -3,9 +3,7 @@
 // =====================
 const fileInput = document.getElementById("fileInput");
 const fileList = document.getElementById("fileList");
-
-// 🔧 FIX: use ONE canonical track collection
-const tracks = document.querySelectorAll(".track");
+const trackAs = document.querySelectorAll(".track");
 
 const masterSlider = document.getElementById("masterGain");
 const playAllBtn = document.getElementById("playAll");
@@ -17,7 +15,6 @@ const loopEnabledCheckbox = document.getElementById("loopEnabled");
 
 let playheadRAF = null;
 let playheadStartTime = null;
-
 
 // =====================
 // GLOBAL STATE
@@ -163,13 +160,12 @@ playAllBtn.onclick = async () => {
   initAudio();
   await audioContext.resume();
 
-  // ❌ DO NOT reset transport here
-  // transportTime must remain as-is
+  // reset transport
+  transportTime = 0;
 
-  // stop any currently playing sources
+  // stop all active audio sources
   trackSources.forEach(src => src?.stop());
   trackSources.fill(null);
-  trackIsPlaying.fill(false);
 
   startPlayhead();
 };
@@ -179,9 +175,7 @@ stopAllBtn.onclick = () => {
 
   trackSources.forEach(src => src?.stop());
   trackSources.fill(null);
-  trackIsPlaying.fill(false);
 };
-
 
 
 // =====================
@@ -423,7 +417,7 @@ const trackOffsets = [0, 0, 0];
 // active solo-play track (null = play all)
 let activeTrackIndex = null;
 
-tracks.forEach((track, i) => {
+trackAs.forEach((track, i) => {
   const label = track.querySelector(".track-label");
   const playBtn = track.querySelector(".track-play");
   const stopBtn = track.querySelector(".track-stop");
@@ -431,7 +425,6 @@ tracks.forEach((track, i) => {
   const muteBtn = track.querySelector(".track-mute");
   const soloBtn = track.querySelector(".track-solo");
   const offsetInput = track.querySelector(".track-offset");
-  const progressSlider = track.querySelector(".track-progress"); // 🔵 BLUE SLIDER
   const trimStartInput = track.querySelector(".track-trim-start");
   const trimEndInput = track.querySelector(".track-trim-end");
   const timeline = track.querySelector(".timeline");
@@ -459,13 +452,6 @@ tracks.forEach((track, i) => {
 
     const offsetSeconds = beatsToSeconds(trackOffsets[i] || 0);
     clip.style.left = offsetSeconds * pxPerSecond + "px";
-
-    // 🔵 sync blue slider
-    if (progressSlider) {
-      const maxBeats = secondsToBeats(8);
-      progressSlider.max = maxBeats;
-      progressSlider.value = trackOffsets[i];
-    }
   }
 
   // ===== UI CONTROLS =====
@@ -488,27 +474,11 @@ tracks.forEach((track, i) => {
     updateTrackGains();
   };
 
-  // 🔢 numeric start (beats)
+  // numeric offset input
   offsetInput.oninput = () => {
     trackOffsets[i] = Math.max(0, Number(offsetInput.value) || 0);
     updateClipVisual();
   };
-
-  // 🔵 BLUE SLIDER → TIME OFFSET (FIX)
-  if (progressSlider) {
-    progressSlider.oninput = () => {
-      const beats = Math.max(0, Number(progressSlider.value) || 0);
-      trackOffsets[i] = beats;
-      offsetInput.value = beats.toFixed(2);
-
-      // seek transport if playing
-      if (isTransportRunning) {
-        transportTime = beatsToSeconds(beats);
-      }
-
-      updateClipVisual();
-    };
-  }
 
   if (trimStartInput) {
     trimStartInput.oninput = () => {
@@ -530,6 +500,7 @@ tracks.forEach((track, i) => {
     if (activeTrackIndex !== null && activeTrackIndex !== i) return;
 
     const bufferDuration = trackBuffers[i].duration;
+
     const trimStart = trackTrimStart[i] || 0;
     const trimEnd =
       trackTrimEnd[i] !== null ? trackTrimEnd[i] : bufferDuration;
@@ -610,16 +581,39 @@ tracks.forEach((track, i) => {
 
     clip.style.left = newLeft + "px";
 
-    const seconds = (newLeft / timeline.clientWidth) * beatsToSeconds(8);
+    const seconds =
+      (newLeft / timeline.clientWidth) * beatsToSeconds(8);
     const beats = secondsToBeats(seconds);
 
     trackOffsets[i] = beats;
     offsetInput.value = beats.toFixed(2);
-    if (progressSlider) progressSlider.value = beats;
   });
 
   document.addEventListener("mouseup", () => {
     dragging = false;
+  });
+
+  // ===== TIMELINE CLICK = TIME SEEK (THE FIX YOU WANTED) =====
+  timeline.addEventListener("mousedown", e => {
+    if (e.target === clip) return;
+
+    const rect = timeline.getBoundingClientRect();
+    const x = Math.max(0, e.clientX - rect.left);
+
+    const seconds =
+      (x / timeline.clientWidth) * beatsToSeconds(8);
+    const beats = secondsToBeats(seconds);
+
+    trackOffsets[i] = beats;
+    offsetInput.value = beats.toFixed(2);
+
+    updateClipVisual();
+
+    if (isTransportRunning) {
+      trackSources[i]?.stop();
+      trackIsPlaying[i] = false;
+      transportTime = beatsToSeconds(beats);
+    }
   });
 
   // ===== ASSIGN SAMPLE FROM LIBRARY =====
@@ -633,7 +627,6 @@ tracks.forEach((track, i) => {
       e.target === muteBtn ||
       e.target === soloBtn ||
       e.target === offsetInput ||
-      e.target === progressSlider ||
       e.target === trimStartInput ||
       e.target === trimEndInput
     ) {
@@ -645,7 +638,6 @@ tracks.forEach((track, i) => {
     trackTrimEnd[i] = null;
     trackOffsets[i] = 0;
     offsetInput.value = "0";
-    if (progressSlider) progressSlider.value = 0;
 
     label.textContent = `Track ${i + 1}: ${selectedLibraryItem.name}`;
     updateClipVisual();
