@@ -11,6 +11,10 @@ const closeModal = document.getElementById("closeModal");
 const uploadForm = document.getElementById("uploadForm");
 const libraryBtn = document.getElementById("libraryBtn");
 
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:12',message:'DOM elements initialized',data:{uploadBtnExists:!!uploadBtn,uploadModalExists:!!uploadModal,uploadFormExists:!!uploadForm},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
+
 let sounds = JSON.parse(localStorage.getItem("sounds") || "[]");
 let activePlayer = null;
 let nextId = Math.max(0, ...sounds.map(s => s.id || 0)) + 1;
@@ -201,17 +205,32 @@ function performSearch() {
 
 function getAudioDuration(file) {
   return new Promise((resolve) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:202',message:'getAudioDuration called',data:{fileName:file?.name,fileSize:file?.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     const audio = new Audio();
-    audio.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    audio.src = objectUrl;
     audio.onloadedmetadata = () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:207',message:'Audio metadata loaded',data:{duration:audio.duration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       resolve(audio.duration);
-      URL.revokeObjectURL(audio.src);
+      URL.revokeObjectURL(objectUrl);
     };
-    audio.onerror = () => resolve(0);
+    audio.onerror = (err) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:210',message:'Audio load error',data:{error:err?.message || 'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      resolve(0);
+    };
   });
 }
 
 uploadForm.addEventListener("submit", async (e) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:214',message:'Form submit event fired',data:{formExists:!!uploadForm},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
   e.preventDefault();
   
   const title = document.getElementById("uploadTitle").value;
@@ -219,9 +238,24 @@ uploadForm.addEventListener("submit", async (e) => {
   const tagsInput = document.getElementById("uploadTags").value;
   const file = document.getElementById("uploadFile").files[0];
   
-  if (!file) return;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:222',message:'Form data extracted',data:{title,category,hasFile:!!file,fileName:file?.name,fileSize:file?.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   
+  if (!file) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:225',message:'No file selected - early return',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    return;
+  }
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:228',message:'Starting getAudioDuration',data:{fileName:file.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   const duration = await getAudioDuration(file);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:229',message:'getAudioDuration completed',data:{duration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   const url = URL.createObjectURL(file);
   const tags = tagsInput ? tagsInput.split(",").map(t => t.trim()).filter(t => t) : [];
   
@@ -235,16 +269,37 @@ uploadForm.addEventListener("submit", async (e) => {
     uploadDate: new Date().toISOString()
   };
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:243',message:'New sound object created',data:{newSoundId:newSound.id,newSoundTitle:newSound.title,soundsLengthBefore:sounds.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   sounds.push(newSound);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:244',message:'Sound added to array',data:{soundsLengthAfter:sounds.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   localStorage.setItem("sounds", JSON.stringify(sounds));
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:245',message:'localStorage save attempted',data:{soundsLength:sounds.length,localStorageSuccess:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   
   uploadModal.style.display = "none";
   uploadForm.reset();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:249',message:'Calling performSearch',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+  // #endregion
   performSearch();
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:250',message:'performSearch completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+  // #endregion
 });
 
 uploadBtn.addEventListener("click", () => {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:246',message:'Upload button clicked',data:{uploadBtnExists:!!uploadBtn,uploadModalExists:!!uploadModal},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   uploadModal.style.display = "flex";
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/0d41191a-b265-4eaf-961d-e6c56c64f590',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:249',message:'Modal display set',data:{display:uploadModal.style.display},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
 });
 
 closeModal.addEventListener("click", () => {
