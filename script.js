@@ -91,7 +91,7 @@ zoomSlider.oninput = e => {
 };
 
 // =====================
-// REGIONS (SELECTION / CLIPS)
+// REGIONS
 // =====================
 function clearRegionsExcept(keepRegion) {
   Object.values(regions.getRegions()).forEach(r => {
@@ -114,38 +114,28 @@ regions.on("region-out", region => {
   if (region.loop) region.play();
 });
 
-// =====================
-// CLEAR REGION ON EMPTY WAVEFORM CLICK
-// =====================
 waveSurfer.on("click", () => {
   Object.values(regions.getRegions()).forEach(r => r.remove());
 });
 
 // =====================
-// DITHER (TPDF – 16 bit)
+// DITHER (TPDF – 16 bit only)
 // =====================
 function applyTPDFDither16(buffer) {
-  const ctx = new OfflineAudioContext(
-    buffer.numberOfChannels,
-    buffer.length,
-    buffer.sampleRate
-  );
+  const dithered = new AudioBuffer({
+    numberOfChannels: buffer.numberOfChannels,
+    length: buffer.length,
+    sampleRate: buffer.sampleRate
+  });
 
-  const dithered = ctx.createBuffer(
-    buffer.numberOfChannels,
-    buffer.length,
-    buffer.sampleRate
-  );
-
-  const lsb = 1 / 65536; // 2^-16
+  const lsb = 1 / 65536;
 
   for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
     const input = buffer.getChannelData(ch);
     const output = dithered.getChannelData(ch);
 
     for (let i = 0; i < input.length; i++) {
-      const tpdf =
-        (Math.random() - Math.random()) * lsb;
+      const tpdf = (Math.random() - Math.random()) * lsb;
       output[i] = Math.max(-1, Math.min(1, input[i] + tpdf));
     }
   }
@@ -154,25 +144,81 @@ function applyTPDFDither16(buffer) {
 }
 
 // =====================
-// EXPORT (Jam3 – 16 bit + dither)
+// 24-BIT PCM WAV ENCODER (NO DITHER)
+// =====================
+function encodeWav24(buffer) {
+  const channels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const frames = buffer.length;
+  const bytesPerSample = 3;
+  const blockAlign = channels * bytesPerSample;
+  const dataSize = frames * blockAlign;
+  const bufferSize = 44 + dataSize;
+
+  const view = new DataView(new ArrayBuffer(bufferSize));
+  let offset = 0;
+
+  const writeString = s => {
+    for (let i = 0; i < s.length; i++) {
+      view.setUint8(offset++, s.charCodeAt(i));
+    }
+  };
+
+  writeString("RIFF");
+  view.setUint32(offset, 36 + dataSize, true); offset += 4;
+  writeString("WAVE");
+  writeString("fmt ");
+  view.setUint32(offset, 16, true); offset += 4;
+  view.setUint16(offset, 1, true); offset += 2; // PCM
+  view.setUint16(offset, channels, true); offset += 2;
+  view.setUint32(offset, sampleRate, true); offset += 4;
+  view.setUint32(offset, sampleRate * blockAlign, true); offset += 4;
+  view.setUint16(offset, blockAlign, true); offset += 2;
+  view.setUint16(offset, 24, true); offset += 2;
+  writeString("data");
+  view.setUint32(offset, dataSize, true); offset += 4;
+
+  for (let i = 0; i < frames; i++) {
+    for (let ch = 0; ch < channels; ch++) {
+      let sample = buffer.getChannelData(ch)[i];
+      sample = Math.max(-1, Math.min(1, sample));
+      let intSample = Math.floor(sample * 0x7fffff);
+
+      view.setUint8(offset++, intSample & 0xff);
+      view.setUint8(offset++, (intSample >> 8) & 0xff);
+      view.setUint8(offset++, (intSample >> 16) & 0xff);
+    }
+  }
+
+  return view.buffer;
+}
+
+// =====================
+// EXPORT (16-bit dither OR 24-bit clean)
 // =====================
 const exportBtn = document.getElementById("exportBtn");
 
 exportBtn.onclick = () => {
   const buffer = waveSurfer.getDecodedData();
-  if (!buffer) {
-    console.warn("No decoded audio yet");
-    return;
+  if (!buffer) return;
+
+  const use24Bit = true; // ← toggle later with UI
+
+  let wavBuffer;
+  let filename;
+
+  if (use24Bit) {
+    wavBuffer = encodeWav24(buffer);
+    filename = "export_24bit.wav";
+  } else {
+    const dithered = applyTPDFDither16(buffer);
+    wavBuffer = audioBufferToWav(dithered);
+    filename = "export_16bit_dither.wav";
   }
 
-  // apply TPDF dither before 16-bit quantization
-  const ditheredBuffer = applyTPDFDither16(buffer);
-
-  const wavArrayBuffer = audioBufferToWav(ditheredBuffer);
-
-  const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
+  const blob = new Blob([wavBuffer], { type: "audio/wav" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "export_16bit_dither.wav";
+  a.download = filename;
   a.click();
 };
