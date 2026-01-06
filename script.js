@@ -122,7 +122,39 @@ waveSurfer.on("click", () => {
 });
 
 // =====================
-// EXPORT (Jam3 – ESM, ISOLATED)
+// DITHER (TPDF – 16 bit)
+// =====================
+function applyTPDFDither16(buffer) {
+  const ctx = new OfflineAudioContext(
+    buffer.numberOfChannels,
+    buffer.length,
+    buffer.sampleRate
+  );
+
+  const dithered = ctx.createBuffer(
+    buffer.numberOfChannels,
+    buffer.length,
+    buffer.sampleRate
+  );
+
+  const lsb = 1 / 65536; // 2^-16
+
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const input = buffer.getChannelData(ch);
+    const output = dithered.getChannelData(ch);
+
+    for (let i = 0; i < input.length; i++) {
+      const tpdf =
+        (Math.random() - Math.random()) * lsb;
+      output[i] = Math.max(-1, Math.min(1, input[i] + tpdf));
+    }
+  }
+
+  return dithered;
+}
+
+// =====================
+// EXPORT (Jam3 – 16 bit + dither)
 // =====================
 const exportBtn = document.getElementById("exportBtn");
 
@@ -133,11 +165,14 @@ exportBtn.onclick = () => {
     return;
   }
 
-  const wavArrayBuffer = audioBufferToWav(buffer);
+  // apply TPDF dither before 16-bit quantization
+  const ditheredBuffer = applyTPDFDither16(buffer);
+
+  const wavArrayBuffer = audioBufferToWav(ditheredBuffer);
 
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "export.wav";
+  a.download = "export_16bit_dither.wav";
   a.click();
 };
