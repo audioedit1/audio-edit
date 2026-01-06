@@ -156,7 +156,17 @@ document.getElementById("exportBtn").onclick = () => {
   const buffer = waveSurfer.getDecodedData();
   if (!buffer) return;
 
-  const wavArrayBuffer = window.audioBufferToWav.default(buffer);
+  const encode =
+    window.audioBufferToWav?.default ||
+    window.audioBufferToWav ||
+    window.AudioBufferToWav;
+
+  if (typeof encode !== "function") {
+    console.error("WAV encoder not found", window.audioBufferToWav);
+    return;
+  }
+
+  const wavArrayBuffer = encode(buffer);
 
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const a = document.createElement("a");
@@ -164,4 +174,5 @@ document.getElementById("exportBtn").onclick = () => {
   a.download = "export.wav";
   a.click();
 };
+
 
