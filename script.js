@@ -150,87 +150,18 @@ waveSurfer.on("click", () => {
 });
 
 // =====================
-// EXPORT CORE (44.1k / 16–24 bit)
+// EXPORT (Jam3 audiobuffer-to-wav)
 // =====================
-document.getElementById("exportBtn").onclick = async () => {
-  const bitDepth = Number(document.getElementById("exportBitDepth").value);
-  const decoded = waveSurfer.getDecodedData();
-  if (!decoded) return;
+document.getElementById("exportBtn").onclick = () => {
+  const buffer = waveSurfer.getDecodedData();
+  if (!buffer) return;
 
-  const wavBuffer = await encodePCM44k(decoded, bitDepth);
-  const blob = new Blob([wavBuffer], { type: "audio/wav" });
+  // human-written Jam3 encoder
+  const wavArrayBuffer = window.audioBufferToWav(buffer);
 
+  const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `export_44k_${bitDepth}bit.wav`;
+  a.download = "export.wav";
   a.click();
 };
-
-
-// =====================
-// WAV ENCODER (PCM + DITHER)
-// =====================
-function encodePCM44k(audioBuffer, bitDepth) {
-  const sampleRate = 44100;
-  const channels = audioBuffer.numberOfChannels;
-  const length = Math.floor(audioBuffer.duration * sampleRate);
-
-  // offline resample
-  const offline = new OfflineAudioContext(
-    channels,
-    length,
-    sampleRate
-  );
-
-  const source = offline.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(offline.destination);
-  source.start();
-
-  return offline.startRendering().then(resampled => {
-    const bytesPerSample = bitDepth === 24 ? 3 : 2;
-    const blockAlign = channels * bytesPerSample;
-    const dataSize = resampled.length * blockAlign;
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
-
-    let offset = 0;
-    const writeStr = s => { for (let i = 0; i < s.length; i++) view.setUint8(offset++, s.charCodeAt(i)); };
-
-    writeStr("RIFF");
-    view.setUint32(offset, 36 + dataSize, true); offset += 4;
-    writeStr("WAVE");
-    writeStr("fmt ");
-    view.setUint32(offset, 16, true); offset += 4;
-    view.setUint16(offset, 1, true); offset += 2; // PCM
-    view.setUint16(offset, channels, true); offset += 2;
-    view.setUint32(offset, sampleRate, true); offset += 4;
-    view.setUint32(offset, sampleRate * blockAlign, true); offset += 4;
-    view.setUint16(offset, blockAlign, true); offset += 2;
-    view.setUint16(offset, bitDepth, true); offset += 2;
-    writeStr("data");
-    view.setUint32(offset, dataSize, true); offset += 4;
-
-    for (let i = 0; i < resampled.length; i++) {
-      for (let ch = 0; ch < channels; ch++) {
-        let s = resampled.getChannelData(ch)[i];
-
-        // TPDF dither
-        const dither = (Math.random() - Math.random()) / (1 << bitDepth);
-        s = Math.max(-1, Math.min(1, s + dither));
-
-        if (bitDepth === 16) {
-          view.setInt16(offset, s * 0x7fff, true);
-          offset += 2;
-        } else {
-          let v = s * 0x7fffff;
-          view.setUint8(offset++, v & 255);
-          view.setUint8(offset++, (v >> 8) & 255);
-          view.setUint8(offset++, (v >> 16) & 255);
-        }
-      }
-    }
-
-    return buffer;
-  });
-}
