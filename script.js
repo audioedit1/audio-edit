@@ -182,7 +182,7 @@ renderBtn.onclick = async () => {
 
   const renderedBuffer = await offlineCtx.startRendering();
 
-  const wavBlob = bufferToWav(renderedBuffer);
+  const wavBlob = bufferToWav32Float(renderedBuffer);
   const url = URL.createObjectURL(wavBlob);
 
   const a = document.createElement("a");
