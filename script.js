@@ -156,7 +156,7 @@ document.getElementById("exportBtn").onclick = () => {
   const buffer = waveSurfer.getDecodedData();
   if (!buffer) return;
 
-  const wavArrayBuffer = window.audioBufferToWav(buffer);
+  const wavArrayBuffer = window.audioBufferToWav.default(buffer);
 
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const a = document.createElement("a");
