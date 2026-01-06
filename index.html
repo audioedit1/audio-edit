@@ -1,35 +1,54 @@
-<!-- Transport -->
-<div class="controls">
-  <input type="file" id="fileInput" accept="audio/*" />
-  <button id="play">Play / Pause</button>
-  <button id="stop">Stop</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Web DAW – Audio Edits Core</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <label>
-    Volume
-    <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
-  </label>
+  <!-- WaveSurfer -->
+  <script type="module" src="script.js"></script>
 
-  <button id="mute">Mute</button>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
 
-  <label>
-    Zoom
-    <input type="range" id="zoom" min="0" max="100" step="1" value="35" />
-  </label>
+  <h1>Web DAW – Editorss Core</h1>
 
-  <!-- EXPORT UI -->
-  <label>
-    Bit
-    <select id="bitDepth">
-      <option value="32">32-bit float</option>
-      <option value="24">24-bit</option>
-      <option value="16">16-bit</option>
-    </select>
-  </label>
+  <!-- Transport -->
+  <div class="controls">
+    <input type="file" id="fileInput" accept="audio/*" />
+    <button id="play">Play / Pause</button>
+    <button id="stop">Stop</button>
 
-  <label>
-    <input type="checkbox" id="dither" checked />
-    Dither
-  </label>
+    <label>
+      Volume
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
+    </label>
 
-  <button id="exportBtn">Export</button>
-</div>
+    <button id="mute">Mute</button>
+
+    <label>
+      Zoom
+      <input type="range" id="zoom" min="0" max="100" step="1" value="35" />
+    </label>
+  </div>
+
+  <!-- Timeline -->
+  <div id="timeline"></div>
+
+  <!-- Waveform -->
+  <div id="waveform"></div>
+
+  <!-- EXPORT -->
+<label>
+  Bit
+  <select id="exportBitDepth">
+    <option value="16">16-bit</option>
+    <option value="24">24-bit</option>
+  </select>
+</label>
+
+<button id="exportBtn">Export WAV</button>
+
+</body>
+</html>
