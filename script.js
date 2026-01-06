@@ -1,38 +1,82 @@
 import WaveSurfer from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js";
 
-const fileInput = document.getElementById("fileInput");
-const uploadArea = document.getElementById("uploadArea");
-const previewSection = document.getElementById("previewSection");
-const fileName = document.getElementById("fileName");
-const waveform = document.getElementById("waveform");
-const playBtn = document.getElementById("playBtn");
-const stopBtn = document.getElementById("stopBtn");
-const volumeSlider = document.getElementById("volumeSlider");
-const volumeValue = document.getElementById("volumeValue");
-const timelineSlider = document.getElementById("timelineSlider");
-const currentTime = document.getElementById("currentTime");
-const totalTime = document.getElementById("totalTime");
-const downloadBtn = document.getElementById("downloadBtn");
-const filesList = document.getElementById("filesList");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const genreFilter = document.getElementById("genreFilter");
+const bpmFilter = document.getElementById("bpmFilter");
+const resultsContainer = document.getElementById("results");
+const uploadBtn = document.getElementById("uploadBtn");
+const uploadModal = document.getElementById("uploadModal");
+const closeModal = document.getElementById("closeModal");
+const uploadForm = document.getElementById("uploadForm");
 
-let waveSurfer = null;
-let currentFile = null;
-let files = JSON.parse(localStorage.getItem("files") || "[]");
+let sounds = JSON.parse(localStorage.getItem("sounds") || "[]");
+let activePlayer = null;
+let nextId = Math.max(0, ...sounds.map(s => s.id || 0)) + 1;
 
-function formatTime(seconds) {
+if (sounds.length === 0) {
+  sounds = [
+    { id: 1, title: "Deep House Loop", genre: "House", bpm: 128, duration: "4:32", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", uploadDate: new Date().toISOString() },
+    { id: 2, title: "Jazz Piano", genre: "Jazz", bpm: 120, duration: "3:15", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", uploadDate: new Date().toISOString() },
+    { id: 3, title: "Rock Drums", genre: "Rock", bpm: 140, duration: "2:48", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", uploadDate: new Date().toISOString() },
+    { id: 4, title: "Ambient Pad", genre: "Ambient", bpm: 90, duration: "5:12", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", uploadDate: new Date().toISOString() },
+    { id: 5, title: "Hip Hop Beat", genre: "Hip Hop", bpm: 95, duration: "3:30", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", uploadDate: new Date().toISOString() },
+    { id: 6, title: "Techno Bass", genre: "Techno", bpm: 130, duration: "4:00", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", uploadDate: new Date().toISOString() },
+    { id: 7, title: "Trap 808", genre: "Trap", bpm: 140, duration: "3:20", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", uploadDate: new Date().toISOString() },
+    { id: 8, title: "Dubstep Wobble", genre: "Dubstep", bpm: 140, duration: "4:15", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", uploadDate: new Date().toISOString() }
+  ];
+  localStorage.setItem("sounds", JSON.stringify(sounds));
+}
+
+function stopActivePlayer() {
+  if (activePlayer) {
+    activePlayer.pause();
+    activePlayer = null;
+  }
+}
+
+function getBpmRange(bpm) {
+  if (bpm < 90) return "60-90";
+  if (bpm < 120) return "90-120";
+  if (bpm < 140) return "120-140";
+  return "140+";
+}
+
+function filterSounds(query, genre, bpm) {
+  let filtered = sounds;
+
+  if (query.trim()) {
+    const lowerQuery = query.toLowerCase();
+    filtered = filtered.filter(item => 
+      item.title.toLowerCase().includes(lowerQuery) ||
+      item.genre.toLowerCase().includes(lowerQuery)
+    );
+  }
+
+  if (genre) {
+    filtered = filtered.filter(item => item.genre === genre);
+  }
+
+  if (bpm) {
+    filtered = filtered.filter(item => {
+      const itemBpmRange = getBpmRange(item.bpm);
+      return itemBpmRange === bpm;
+    });
+  }
+
+  return filtered;
+}
+
+function formatDuration(seconds) {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-function createWaveSurfer(url) {
-  if (waveSurfer) {
-    waveSurfer.destroy();
-  }
-
-  waveSurfer = WaveSurfer.create({
-    container: waveform,
-    height: 120,
+function createPlayer(audioUrl, container) {
+  const player = WaveSurfer.create({
+    container: container,
+    height: 80,
     waveColor: "#4aa3ff",
     progressColor: "#1e6fd9",
     cursorColor: "#ffffff",
@@ -43,219 +87,175 @@ function createWaveSurfer(url) {
     interact: true
   });
 
-  waveSurfer.load(url);
-
-  waveSurfer.on("ready", () => {
-    const duration = waveSurfer.getDuration();
-    totalTime.textContent = formatTime(duration);
-    timelineSlider.max = duration;
-  });
-
-  waveSurfer.on("timeupdate", (time) => {
-    currentTime.textContent = formatTime(time);
-    if (!timelineSlider.matches(":active")) {
-      timelineSlider.value = time;
-    }
-  });
-
-  waveSurfer.on("finish", () => {
-    playBtn.textContent = "▶ Play";
-  });
-
-  return waveSurfer;
+  player.load(audioUrl);
+  return player;
 }
 
-function handleFile(file) {
-  if (!file) return;
-
-  currentFile = file;
-  fileName.textContent = file.name;
-  previewSection.style.display = "block";
-
-  const url = URL.createObjectURL(file);
-  createWaveSurfer(url);
-
-  const fileData = {
-    id: Date.now(),
-    name: file.name,
-    url: url,
-    size: file.size,
-    type: file.type,
-    uploadDate: new Date().toISOString()
-  };
-
-  const existingIndex = files.findIndex(f => f.name === file.name);
-  if (existingIndex >= 0) {
-    if (files[existingIndex].url && files[existingIndex].url.startsWith("blob:")) {
-      URL.revokeObjectURL(files[existingIndex].url);
-    }
-    files[existingIndex] = fileData;
-  } else {
-    files.push(fileData);
-  }
-
-  localStorage.setItem("files", JSON.stringify(files));
-  renderFilesList();
-}
-
-fileInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  handleFile(file);
-});
-
-uploadArea.addEventListener("click", () => {
-  fileInput.click();
-});
-
-uploadArea.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  uploadArea.classList.add("dragover");
-});
-
-uploadArea.addEventListener("dragleave", () => {
-  uploadArea.classList.remove("dragover");
-});
-
-uploadArea.addEventListener("drop", (e) => {
-  e.preventDefault();
-  uploadArea.classList.remove("dragover");
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith("audio/")) {
-    fileInput.files = e.dataTransfer.files;
-    handleFile(file);
-  }
-});
-
-playBtn.addEventListener("click", () => {
-  if (!waveSurfer) return;
-  
-  if (waveSurfer.isPlaying()) {
-    waveSurfer.pause();
-    playBtn.textContent = "▶ Play";
-  } else {
-    waveSurfer.play();
-    playBtn.textContent = "⏸ Pause";
-  }
-});
-
-stopBtn.addEventListener("click", () => {
-  if (!waveSurfer) return;
-  waveSurfer.stop();
-  playBtn.textContent = "▶ Play";
-  timelineSlider.value = 0;
-  currentTime.textContent = "0:00";
-});
-
-volumeSlider.addEventListener("input", (e) => {
-  const value = parseFloat(e.target.value);
-  if (waveSurfer) {
-    waveSurfer.setVolume(value);
-  }
-  volumeValue.textContent = `${Math.round(value * 100)}%`;
-});
-
-timelineSlider.addEventListener("input", (e) => {
-  if (!waveSurfer) return;
-  const time = parseFloat(e.target.value);
-  const duration = waveSurfer.getDuration();
-  waveSurfer.seekTo(time / duration);
-  currentTime.textContent = formatTime(time);
-});
-
-downloadBtn.addEventListener("click", () => {
-  if (!currentFile) return;
-  
+function downloadSound(sound) {
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(currentFile);
-  link.download = currentFile.name;
+  link.href = sound.url;
+  link.download = `${sound.title}.mp3`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-});
+}
 
-function renderFilesList() {
-  filesList.innerHTML = "";
+function createResultCard(item) {
+  const card = document.createElement("div");
+  card.className = "result-card";
   
-  if (files.length === 0) {
-    filesList.innerHTML = '<p class="no-files">No files uploaded yet</p>';
+  const waveformId = `waveform-${item.id}`;
+  
+  card.innerHTML = `
+    <div class="card-header">
+      <h3>${item.title}</h3>
+      <div class="meta">
+        <span class="genre">${item.genre}</span>
+        <span class="bpm">${item.bpm} BPM</span>
+        <span class="duration">${item.duration || "N/A"}</span>
+      </div>
+    </div>
+    <div id="${waveformId}" class="waveform-container"></div>
+    <div class="card-controls">
+      <button class="play-btn" data-id="${item.id}">▶ Play</button>
+      <button class="stop-btn" data-id="${item.id}">⏹ Stop</button>
+      <button class="download-btn" data-id="${item.id}">⬇ Download</button>
+    </div>
+  `;
+
+  const playBtn = card.querySelector(".play-btn");
+  const stopBtn = card.querySelector(".stop-btn");
+  const downloadBtn = card.querySelector(".download-btn");
+  const waveformContainer = card.querySelector(`#${waveformId}`);
+  
+  let player = null;
+  let isPlaying = false;
+
+  player = createPlayer(item.url, waveformContainer);
+
+  playBtn.addEventListener("click", () => {
+    if (isPlaying) {
+      player.pause();
+      playBtn.textContent = "▶ Play";
+      isPlaying = false;
+      activePlayer = null;
+    } else {
+      stopActivePlayer();
+      player.play();
+      playBtn.textContent = "⏸ Pause";
+      isPlaying = true;
+      activePlayer = player;
+    }
+  });
+
+  stopBtn.addEventListener("click", () => {
+    player.stop();
+    playBtn.textContent = "▶ Play";
+    isPlaying = false;
+    activePlayer = null;
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    downloadSound(item);
+  });
+
+  player.on("finish", () => {
+    playBtn.textContent = "▶ Play";
+    isPlaying = false;
+    activePlayer = null;
+  });
+
+  return card;
+}
+
+function renderResults(results) {
+  resultsContainer.innerHTML = "";
+  
+  if (results.length === 0) {
+    resultsContainer.innerHTML = '<div class="no-results">No loops found</div>';
     return;
   }
 
-  const listTitle = document.createElement("h2");
-  listTitle.textContent = "Uploaded Files";
-  filesList.appendChild(listTitle);
-
-  files.forEach(file => {
-    const fileItem = document.createElement("div");
-    fileItem.className = "file-item";
-    
-    fileItem.innerHTML = `
-      <div class="file-details">
-        <span class="file-name">${file.name}</span>
-        <span class="file-size">${(file.size / 1024).toFixed(2)} KB</span>
-      </div>
-      <button class="load-btn" data-id="${file.id}">Load</button>
-      <button class="play-file-btn" data-id="${file.id}">Play</button>
-      <button class="download-file-btn" data-id="${file.id}">Download</button>
-      <button class="delete-btn" data-id="${file.id}">Delete</button>
-    `;
-
-    const loadBtn = fileItem.querySelector(".load-btn");
-    const playFileBtn = fileItem.querySelector(".play-file-btn");
-    const downloadFileBtn = fileItem.querySelector(".download-file-btn");
-    const deleteBtn = fileItem.querySelector(".delete-btn");
-
-    loadBtn.addEventListener("click", () => {
-      const fileData = files.find(f => f.id === file.id);
-      if (!fileData) return;
-      
-      fileName.textContent = fileData.name;
-      previewSection.style.display = "block";
-      createWaveSurfer(fileData.url);
-      
-      fetch(fileData.url)
-        .then(res => res.blob())
-        .then(blob => {
-          currentFile = new File([blob], fileData.name, { type: blob.type });
-        });
-    });
-
-    playFileBtn.addEventListener("click", () => {
-      const fileData = files.find(f => f.id === file.id);
-      if (!fileData) return;
-      
-      const audio = new Audio(fileData.url);
-      audio.play();
-    });
-
-    downloadFileBtn.addEventListener("click", () => {
-      const fileData = files.find(f => f.id === file.id);
-      if (!fileData) return;
-      
-      fetch(fileData.url)
-        .then(res => res.blob())
-        .then(blob => {
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = fileData.name;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        });
-    });
-
-    deleteBtn.addEventListener("click", () => {
-      const fileData = files.find(f => f.id === file.id);
-      if (fileData && fileData.url && fileData.url.startsWith("blob:")) {
-        URL.revokeObjectURL(fileData.url);
-      }
-      files = files.filter(f => f.id !== file.id);
-      localStorage.setItem("files", JSON.stringify(files));
-      renderFilesList();
-    });
-
-    filesList.appendChild(fileItem);
+  results.forEach(item => {
+    const card = createResultCard(item);
+    resultsContainer.appendChild(card);
   });
 }
 
-renderFilesList();
+function performSearch() {
+  const query = searchInput.value;
+  const genre = genreFilter.value;
+  const bpm = bpmFilter.value;
+  const results = filterSounds(query, genre, bpm);
+  renderResults(results);
+}
+
+function getAudioDuration(file) {
+  return new Promise((resolve) => {
+    const audio = new Audio();
+    audio.src = URL.createObjectURL(file);
+    audio.onloadedmetadata = () => {
+      resolve(audio.duration);
+      URL.revokeObjectURL(audio.src);
+    };
+    audio.onerror = () => resolve(0);
+  });
+}
+
+uploadForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  
+  const title = document.getElementById("uploadTitle").value;
+  const genre = document.getElementById("uploadGenre").value;
+  const bpm = parseInt(document.getElementById("uploadBpm").value);
+  const file = document.getElementById("uploadFile").files[0];
+  
+  if (!file) return;
+  
+  const duration = await getAudioDuration(file);
+  const durationStr = formatDuration(duration);
+  const url = URL.createObjectURL(file);
+  
+  const newSound = {
+    id: nextId++,
+    title,
+    genre,
+    bpm,
+    duration: durationStr,
+    url,
+    uploadDate: new Date().toISOString()
+  };
+  
+  sounds.push(newSound);
+  localStorage.setItem("sounds", JSON.stringify(sounds));
+  
+  uploadModal.style.display = "none";
+  uploadForm.reset();
+  performSearch();
+});
+
+uploadBtn.addEventListener("click", () => {
+  uploadModal.style.display = "flex";
+});
+
+closeModal.addEventListener("click", () => {
+  uploadModal.style.display = "none";
+});
+
+uploadModal.addEventListener("click", (e) => {
+  if (e.target === uploadModal) {
+    uploadModal.style.display = "none";
+  }
+});
+
+searchBtn.addEventListener("click", performSearch);
+searchInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    performSearch();
+  }
+});
+
+genreFilter.addEventListener("change", performSearch);
+bpmFilter.addEventListener("change", performSearch);
+
+renderResults(sounds);
