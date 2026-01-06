@@ -148,4 +148,103 @@ waveSurfer.on("click", () => {
 waveSurfer.on("click", () => {
   Object.values(regions.getRegions()).forEach(r => r.remove());
 });
-Z
+
+// =====================
+// RENDER / EXPORT
+// =====================
+const renderBtn = document.getElementById("render");
+
+renderBtn.onclick = async () => {
+  const audioBuffer = waveSurfer.getDecodedData();
+  if (!audioBuffer) return;
+
+  const regionList = Object.values(regions.getRegions());
+  const hasRegion = regionList.length > 0;
+
+  const startTime = hasRegion ? regionList[0].start : 0;
+  const endTime = hasRegion ? regionList[0].end : audioBuffer.duration;
+
+  const sampleRate = audioBuffer.sampleRate;
+  const startSample = Math.floor(startTime * sampleRate);
+  const endSample = Math.floor(endTime * sampleRate);
+  const frameCount = endSample - startSample;
+
+  const offlineCtx = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    frameCount,
+    sampleRate
+  );
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(offlineCtx.destination);
+  source.start(0, startTime, endTime - startTime);
+
+  const renderedBuffer = await offlineCtx.startRendering();
+
+  const wavBlob = bufferToWav(renderedBuffer);
+  const url = URL.createObjectURL(wavBlob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "render.wav";
+  a.click();
+
+  URL.revokeObjectURL(url);
+};
+
+// =====================
+// WAV ENCODER (16-bit PCM)
+// =====================
+function bufferToWav(buffer) {
+  const numChannels = buffer.numberOfChannels;
+  const length = buffer.length * numChannels * 2 + 44;
+  const arrayBuffer = new ArrayBuffer(length);
+  const view = new DataView(arrayBuffer);
+
+  let offset = 0;
+
+  function writeString(str) {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset++, str.charCodeAt(i));
+    }
+  }
+
+  writeString("RIFF");
+  view.setUint32(offset, 36 + buffer.length * numChannels * 2, true);
+  offset += 4;
+  writeString("WAVE");
+  writeString("fmt ");
+  view.setUint32(offset, 16, true);
+  offset += 4;
+  view.setUint16(offset, 1, true);
+  offset += 2;
+  view.setUint16(offset, numChannels, true);
+  offset += 2;
+  view.setUint32(offset, buffer.sampleRate, true);
+  offset += 4;
+  view.setUint32(offset, buffer.sampleRate * numChannels * 2, true);
+  offset += 4;
+  view.setUint16(offset, numChannels * 2, true);
+  offset += 2;
+  view.setUint16(offset, 16, true);
+  offset += 2;
+  writeString("data");
+  view.setUint32(offset, buffer.length * numChannels * 2, true);
+  offset += 4;
+
+  const channels = [];
+  for (let i = 0; i < numChannels; i++) {
+    channels.push(buffer.getChannelData(i));
+  }
+
+  for (let i = 0; i < buffer.length; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      let sample = Math.max(-1, Math.min(1, channels[ch][i]));
+      view.setInt16(offset, sample * 0x7fff, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([arrayBuffer], { type: "audio/wav" });
+}
