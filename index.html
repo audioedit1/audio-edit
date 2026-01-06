@@ -2,21 +2,82 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Audio Search & Preview</title>
+  <title>Looperman - Audio Search & Share</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Audio Search</h1>
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search audio files..." autocomplete="off" />
-        <button id="searchBtn">Search</button>
+      <h1>Looperman</h1>
+      <div class="header-actions">
+        <button id="uploadBtn" class="upload-btn">Upload Sound</button>
       </div>
     </header>
 
+    <div class="search-section">
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search sounds, genres, BPM..." autocomplete="off" />
+        <button id="searchBtn">Search</button>
+      </div>
+      <div class="filters">
+        <select id="genreFilter">
+          <option value="">All Genres</option>
+          <option value="House">House</option>
+          <option value="Hip Hop">Hip Hop</option>
+          <option value="Rock">Rock</option>
+          <option value="Jazz">Jazz</option>
+          <option value="Techno">Techno</option>
+          <option value="Ambient">Ambient</option>
+          <option value="Electronic">Electronic</option>
+        </select>
+        <select id="bpmFilter">
+          <option value="">All BPM</option>
+          <option value="60-90">60-90</option>
+          <option value="90-120">90-120</option>
+          <option value="120-140">120-140</option>
+          <option value="140+">140+</option>
+        </select>
+      </div>
+    </div>
+
     <div id="results" class="results-grid"></div>
+  </div>
+
+  <div id="uploadModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Upload Sound</h2>
+        <button class="close-btn" id="closeModal">&times;</button>
+      </div>
+      <form id="uploadForm">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="uploadTitle" required />
+        </div>
+        <div class="form-group">
+          <label>Genre</label>
+          <select id="uploadGenre" required>
+            <option value="House">House</option>
+            <option value="Hip Hop">Hip Hop</option>
+            <option value="Rock">Rock</option>
+            <option value="Jazz">Jazz</option>
+            <option value="Techno">Techno</option>
+            <option value="Ambient">Ambient</option>
+            <option value="Electronic">Electronic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>BPM</label>
+          <input type="number" id="uploadBpm" min="60" max="200" required />
+        </div>
+        <div class="form-group">
+          <label>Audio File</label>
+          <input type="file" id="uploadFile" accept="audio/*" required />
+        </div>
+        <button type="submit" class="submit-btn">Upload</button>
+      </form>
+    </div>
   </div>
 
   <script type="module" src="script.js"></script>
