@@ -52,9 +52,10 @@ function createWaveSurfer(url) {
   });
 
   waveSurfer.on("timeupdate", (time) => {
-    const duration = waveSurfer.getDuration();
     currentTime.textContent = formatTime(time);
-    timelineSlider.value = time;
+    if (!timelineSlider.matches(":active")) {
+      timelineSlider.value = time;
+    }
   });
 
   waveSurfer.on("finish", () => {
@@ -85,6 +86,9 @@ function handleFile(file) {
 
   const existingIndex = files.findIndex(f => f.name === file.name);
   if (existingIndex >= 0) {
+    if (files[existingIndex].url && files[existingIndex].url.startsWith("blob:")) {
+      URL.revokeObjectURL(files[existingIndex].url);
+    }
     files[existingIndex] = fileData;
   } else {
     files.push(fileData);
@@ -116,7 +120,7 @@ uploadArea.addEventListener("drop", (e) => {
   e.preventDefault();
   uploadArea.classList.remove("dragover");
   const file = e.dataTransfer.files[0];
-  if (file) {
+  if (file && file.type.startsWith("audio/")) {
     fileInput.files = e.dataTransfer.files;
     handleFile(file);
   }
@@ -153,7 +157,8 @@ volumeSlider.addEventListener("input", (e) => {
 timelineSlider.addEventListener("input", (e) => {
   if (!waveSurfer) return;
   const time = parseFloat(e.target.value);
-  waveSurfer.seekTo(time / waveSurfer.getDuration());
+  const duration = waveSurfer.getDuration();
+  waveSurfer.seekTo(time / duration);
   currentTime.textContent = formatTime(time);
 });
 
@@ -189,29 +194,61 @@ function renderFilesList() {
         <span class="file-name">${file.name}</span>
         <span class="file-size">${(file.size / 1024).toFixed(2)} KB</span>
       </div>
-      <button class="load-btn" data-url="${file.url}" data-name="${file.name}">Load</button>
+      <button class="load-btn" data-id="${file.id}">Load</button>
+      <button class="play-file-btn" data-id="${file.id}">Play</button>
+      <button class="download-file-btn" data-id="${file.id}">Download</button>
       <button class="delete-btn" data-id="${file.id}">Delete</button>
     `;
 
     const loadBtn = fileItem.querySelector(".load-btn");
+    const playFileBtn = fileItem.querySelector(".play-file-btn");
+    const downloadFileBtn = fileItem.querySelector(".download-file-btn");
     const deleteBtn = fileItem.querySelector(".delete-btn");
 
     loadBtn.addEventListener("click", () => {
-      const url = loadBtn.dataset.url;
-      const name = loadBtn.dataset.name;
+      const fileData = files.find(f => f.id === file.id);
+      if (!fileData) return;
       
-      fileName.textContent = name;
+      fileName.textContent = fileData.name;
       previewSection.style.display = "block";
-      createWaveSurfer(url);
+      createWaveSurfer(fileData.url);
       
-      fetch(url)
+      fetch(fileData.url)
         .then(res => res.blob())
         .then(blob => {
-          currentFile = new File([blob], name, { type: blob.type });
+          currentFile = new File([blob], fileData.name, { type: blob.type });
+        });
+    });
+
+    playFileBtn.addEventListener("click", () => {
+      const fileData = files.find(f => f.id === file.id);
+      if (!fileData) return;
+      
+      const audio = new Audio(fileData.url);
+      audio.play();
+    });
+
+    downloadFileBtn.addEventListener("click", () => {
+      const fileData = files.find(f => f.id === file.id);
+      if (!fileData) return;
+      
+      fetch(fileData.url)
+        .then(res => res.blob())
+        .then(blob => {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = fileData.name;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         });
     });
 
     deleteBtn.addEventListener("click", () => {
+      const fileData = files.find(f => f.id === file.id);
+      if (fileData && fileData.url && fileData.url.startsWith("blob:")) {
+        URL.revokeObjectURL(fileData.url);
+      }
       files = files.filter(f => f.id !== file.id);
       localStorage.setItem("files", JSON.stringify(files));
       renderFilesList();

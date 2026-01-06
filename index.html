@@ -2,50 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>File Upload & Download</title>
+  <title>Audio Upload & Play</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>File Upload & Download</h1>
+    <h1>Audio Upload & Play</h1>
 
     <div class="upload-section">
       <div class="upload-area" id="uploadArea">
         <input type="file" id="fileInput" accept="audio/*" />
         <div class="upload-text">
-          <p>Click or drag file here to upload</p>
+          <p>Click or drag audio file here to upload</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="previewSection" class="preview-section" style="display: none;">
+      <div class="file-info">
+        <h3 id="fileName"></h3>
+      </div>
+      
+      <div id="waveform" class="waveform"></div>
+      
+      <div class="controls">
+        <button id="playBtn">▶ Play</button>
+        <button id="stopBtn">⏹ Stop</button>
+        
+        <div class="volume-control">
+          <label>Volume</label>
+          <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" />
+          <span id="volumeValue">100%</span>
         </div>
       </div>
 
-      <div id="previewSection" class="preview-section" style="display: none;">
-        <div class="file-info">
-          <h3 id="fileName"></h3>
+      <div class="timeline-control">
+        <label>Timeline</label>
+        <input type="range" id="timelineSlider" min="0" max="100" step="0.1" value="0" />
+        <div class="time-display">
+          <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
         </div>
-        
-        <div id="waveform" class="waveform"></div>
-        
-        <div class="controls">
-          <button id="playBtn">▶ Play</button>
-          <button id="stopBtn">⏹ Stop</button>
-          
-          <div class="volume-control">
-            <label>Volume</label>
-            <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1" />
-            <span id="volumeValue">100%</span>
-          </div>
-        </div>
-
-        <div class="timeline-control">
-          <label>Timeline</label>
-          <input type="range" id="timelineSlider" min="0" max="100" step="0.1" value="0" />
-          <div class="time-display">
-            <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
-          </div>
-        </div>
-
-        <button id="downloadBtn" class="download-btn">⬇ Download</button>
       </div>
+
+      <button id="downloadBtn" class="download-btn">⬇ Download</button>
     </div>
 
     <div class="files-list" id="filesList"></div>
