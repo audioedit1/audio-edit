@@ -156,7 +156,6 @@ document.getElementById("exportBtn").onclick = () => {
   const buffer = waveSurfer.getDecodedData();
   if (!buffer) return;
 
-  // human-written Jam3 encoder
   const wavArrayBuffer = window.audioBufferToWav(buffer);
 
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
@@ -165,3 +164,4 @@ document.getElementById("exportBtn").onclick = () => {
   a.download = "export.wav";
   a.click();
 };
+
