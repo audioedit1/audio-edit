@@ -17,20 +17,15 @@ const timeline = TimelinePlugin.create({
 const waveSurfer = WaveSurfer.create({
   container: "#waveform",
   height: 140,
-
   waveColor: "#4aa3ff",
   progressColor: "#1e6fd9",
   cursorColor: "#ffffff",
-
   normalize: false,
   fillParent: true,
-
-  // maximum visual fidelity
   minPxPerSec: 5,
   barWidth: 1,
   barGap: 0,
   barRadius: 0,
-
   autoScroll: true,
   interact: true,
   plugins: [regions, timeline]
@@ -72,47 +67,32 @@ let muted = false;
 volumeSlider.oninput = e => {
   const value = Number(e.target.value);
   lastVolume = value;
-
-  if (!muted) {
-    waveSurfer.setVolume(value);
-  }
+  if (!muted) waveSurfer.setVolume(value);
 };
 
 muteBtn.onclick = () => {
   muted = !muted;
-
-  if (muted) {
-    waveSurfer.setVolume(0);
-    muteBtn.textContent = "Unmute";
-  } else {
-    waveSurfer.setVolume(lastVolume);
-    muteBtn.textContent = "Mute";
-  }
+  waveSurfer.setVolume(muted ? 0 : lastVolume);
+  muteBtn.textContent = muted ? "Unmute" : "Mute";
 };
+
 // =====================
 // ZOOM
 // =====================
 const zoomSlider = document.getElementById("zoom");
 
 zoomSlider.oninput = e => {
-  const sliderValue = Number(e.target.value);
-
-  // push WaveSurfer to its ceiling
-  const minZoom = 5;        // overview
-  const maxZoom = 50000;    // extreme detail illusion
-
+  const minZoom = 5;
+  const maxZoom = 50000;
   const zoom =
     minZoom *
-    Math.pow(maxZoom / minZoom, sliderValue / 100);
-
+    Math.pow(maxZoom / minZoom, Number(e.target.value) / 100);
   waveSurfer.zoom(zoom);
 };
 
 // =====================
 // REGIONS (SELECTION / CLIPS)
 // =====================
-
-// helper: remove all regions except one
 function clearRegionsExcept(keepRegion) {
   Object.values(regions.getRegions()).forEach(r => {
     if (r !== keepRegion) r.remove();
@@ -125,13 +105,11 @@ waveSurfer.on("ready", () => {
   });
 });
 
-// keep only the newest region
 regions.on("region-created", region => {
   clearRegionsExcept(region);
   region.loop = true;
 });
 
-// loop playback
 regions.on("region-out", region => {
   if (region.loop) region.play();
 });
@@ -144,30 +122,18 @@ waveSurfer.on("click", () => {
 });
 
 // =====================
-// CLEAR REGION ON EMPTY WAVEFORM CLICK
+// EXPORT (Jam3 – ESM, ISOLATED)
 // =====================
-waveSurfer.on("click", () => {
-  Object.values(regions.getRegions()).forEach(r => r.remove());
-});
+const exportBtn = document.getElementById("exportBtn");
 
-// =====================
-// EXPORT (Jam3 audiobuffer-to-wav)
-// =====================
-document.getElementById("exportBtn").onclick = () => {
+exportBtn.onclick = () => {
   const buffer = waveSurfer.getDecodedData();
-  if (!buffer) return;
-
-  const encode =
-    window.audioBufferToWav?.default ||
-    window.audioBufferToWav ||
-    window.AudioBufferToWav;
-
-  if (typeof encode !== "function") {
-    console.error("WAV encoder not found", window.audioBufferToWav);
+  if (!buffer) {
+    console.warn("No decoded audio yet");
     return;
   }
 
-  const wavArrayBuffer = encode(buffer);
+  const wavArrayBuffer = audioBufferToWav(buffer);
 
   const blob = new Blob([wavArrayBuffer], { type: "audio/wav" });
   const a = document.createElement("a");
@@ -175,5 +141,3 @@ document.getElementById("exportBtn").onclick = () => {
   a.download = "export.wav";
   a.click();
 };
-
-
