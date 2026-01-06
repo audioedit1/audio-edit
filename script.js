@@ -16,11 +16,9 @@ const timeline = TimelinePlugin.create({
 const waveSurfer = WaveSurfer.create({
   container: "#waveform",
   height: 140,
-
   waveColor: "#4aa3ff",
   progressColor: "#1e6fd9",
   cursorColor: "#ffffff",
-
   normalize: false,
   fillParent: true,
 
@@ -88,6 +86,7 @@ muteBtn.onclick = () => {
     muteBtn.textContent = "Mute";
   }
 };
+
 // =====================
 // ZOOM
 // =====================
@@ -120,19 +119,18 @@ function clearRegionsExcept(keepRegion) {
 
 waveSurfer.on("ready", () => {
   regions.enableDragSelection({
-    color: "rgba(74,163,255,0.3)"
+    color: "rgba(74,163,255,0.3)",
+    minLength: 0
   });
 });
 
-// keep only the newest region
 regions.on("region-created", region => {
   clearRegionsExcept(region);
-  region.loop = true;
 });
 
-// loop playback
+// DAW-style loop: do NOT mutate region
 regions.on("region-out", region => {
-  if (region.loop) region.play();
+  waveSurfer.play(region.start, region.end);
 });
 
 // =====================
@@ -143,121 +141,71 @@ waveSurfer.on("click", () => {
 });
 
 // =====================
-// CLEAR REGION ON EMPTY WAVEFORM CLICK
+// EXPORT / BOUNCE
 // =====================
-waveSurfer.on("click", () => {
-  Object.values(regions.getRegions()).forEach(r => r.remove());
-});
+const exportBtn = document.getElementById("export");
 
-// =====================
-// RENDER / EXPORT
-// =====================
-const renderBtn = document.getElementById("render");
-
-renderBtn.onclick = async () => {
-  const audioBuffer = waveSurfer.getDecodedData();
-  if (!audioBuffer) return;
-
+exportBtn.onclick = () => {
   const regionList = Object.values(regions.getRegions());
-  const hasRegion = regionList.length > 0;
 
-  const startTime = hasRegion ? regionList[0].start : 0;
-  const endTime = hasRegion ? regionList[0].end : audioBuffer.duration;
+  if (regionList.length !== 1) {
+    alert("Please select exactly one region to export.");
+    return;
+  }
 
-  const sampleRate = audioBuffer.sampleRate;
-const startSample = Math.floor(startTime * sampleRate);
-const endSample = Math.floor(endTime * sampleRate);
-const frameCount = endSample - startSample;
+  const region = regionList[0];
 
-// create sliced buffer
-const slicedBuffer = new AudioBuffer({
-  length: frameCount,
-  numberOfChannels: audioBuffer.numberOfChannels,
-  sampleRate
-});
+  const buffer = waveSurfer.getDecodedData();
+  if (!buffer) {
+    alert("Audio not ready.");
+    return;
+  }
 
-for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-  slicedBuffer
-    .getChannelData(ch)
-    .set(
-      audioBuffer.getChannelData(ch).slice(startSample, endSample)
-    );
-}
+  const sampleRate = buffer.sampleRate;
+  const startSample = Math.floor(region.start * sampleRate);
+  const endSample = Math.floor(region.end * sampleRate);
+  const length = endSample - startSample;
 
-const offlineCtx = new OfflineAudioContext(
-  slicedBuffer.numberOfChannels,
-  slicedBuffer.length,
-  sampleRate
-);
+  if (length <= 0) {
+    alert("Invalid region length.");
+    return;
+  }
 
-const source = offlineCtx.createBufferSource();
-source.buffer = slicedBuffer;
-source.connect(offlineCtx.destination);
-source.start(0);
+  // slice PCM data
+  const channelCount = buffer.numberOfChannels;
+  const slicedBuffer = new AudioBuffer({
+    length,
+    numberOfChannels: channelCount,
+    sampleRate
+  });
 
-  const renderedBuffer = await offlineCtx.startRendering();
+  for (let ch = 0; ch < channelCount; ch++) {
+    const channelData = buffer.getChannelData(ch).slice(startSample, endSample);
+    slicedBuffer.copyToChannel(channelData, ch);
+  }
 
-  const wavBlob = bufferToWav32Float(renderedBuffer);
+  // encode WAV
+  const wavBlob = audioBufferToWav(slicedBuffer);
   const url = URL.createObjectURL(wavBlob);
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = "render.wav";
+  a.download = "export.wav";
   a.click();
 
   URL.revokeObjectURL(url);
 };
 
 // =====================
-// WAV ENCODERS
-// 32-bit float / 24-bit dither / 16-bit dither
+// WAV ENCODER (PCM 16-bit)
 // =====================
-
-function bufferToWav32Float(buffer) {
-  return encodeWav(buffer, "float32");
-}
-
-function bufferToWav24BitDither(buffer) {
-  return encodeWav(buffer, "pcm24-dither");
-}
-
-function bufferToWav16BitDither(buffer) {
-  return encodeWav(buffer, "pcm16-dither");
-}
-
-// =====================
-// CORE WAV ENCODER
-// =====================
-function encodeWav(buffer, mode) {
+function audioBufferToWav(buffer) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
-  const numFrames = buffer.length;
-
-  let bytesPerSample;
-  let formatTag;
-  let bitDepth;
-
-  if (mode === "float32") {
-    bytesPerSample = 4;
-    formatTag = 3; // IEEE float
-    bitDepth = 32;
-  } else if (mode === "pcm24-dither") {
-    bytesPerSample = 3;
-    formatTag = 1; // PCM
-    bitDepth = 24;
-  } else {
-    bytesPerSample = 2;
-    formatTag = 1; // PCM
-    bitDepth = 16;
-  }
-
-  const blockAlign = numChannels * bytesPerSample;
-  const byteRate = sampleRate * blockAlign;
-  const dataSize = numFrames * blockAlign;
-  const bufferSize = 44 + dataSize;
-
-  const arrayBuffer = new ArrayBuffer(bufferSize);
+  const length = buffer.length * numChannels * 2 + 44;
+  const arrayBuffer = new ArrayBuffer(length);
   const view = new DataView(arrayBuffer);
+
   let offset = 0;
 
   function writeString(str) {
@@ -266,67 +214,42 @@ function encodeWav(buffer, mode) {
     }
   }
 
-  // RIFF
+  function writeUint32(value) {
+    view.setUint32(offset, value, true);
+    offset += 4;
+  }
+
+  function writeUint16(value) {
+    view.setUint16(offset, value, true);
+    offset += 2;
+  }
+
   writeString("RIFF");
-  view.setUint32(offset, 36 + dataSize, true);
-  offset += 4;
+  writeUint32(length - 8);
   writeString("WAVE");
-
-  // fmt
   writeString("fmt ");
-  view.setUint32(offset, 16, true);
-  offset += 4;
-  view.setUint16(offset, formatTag, true);
-  offset += 2;
-  view.setUint16(offset, numChannels, true);
-  offset += 2;
-  view.setUint32(offset, sampleRate, true);
-  offset += 4;
-  view.setUint32(offset, byteRate, true);
-  offset += 4;
-  view.setUint16(offset, blockAlign, true);
-  offset += 2;
-  view.setUint16(offset, bitDepth, true);
-  offset += 2;
-
-  // data
+  writeUint32(16);
+  writeUint16(1);
+  writeUint16(numChannels);
+  writeUint32(sampleRate);
+  writeUint32(sampleRate * numChannels * 2);
+  writeUint16(numChannels * 2);
+  writeUint16(16);
   writeString("data");
-  view.setUint32(offset, dataSize, true);
-  offset += 4;
+  writeUint32(length - offset - 4);
 
-  // write samples
-  for (let i = 0; i < numFrames; i++) {
+  for (let i = 0; i < buffer.length; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
       let sample = buffer.getChannelData(ch)[i];
-
-      if (formatTag === 3) {
-        // 32-bit float
-        view.setFloat32(offset, sample, true);
-        offset += 4;
-      } else {
-        // PCM with TPDF dither
-        const dither =
-          (Math.random() - Math.random()) *
-          (1 / (1 << (bitDepth - 1)));
-
-        sample = Math.max(-1, Math.min(1, sample + dither));
-
-        if (bitDepth === 24) {
-          let intSample = Math.round(sample * 0x7fffff);
-          view.setUint8(offset++, intSample & 0xff);
-          view.setUint8(offset++, (intSample >> 8) & 0xff);
-          view.setUint8(offset++, (intSample >> 16) & 0xff);
-        } else {
-          view.setInt16(
-            offset,
-            Math.round(sample * 0x7fff),
-            true
-          );
-          offset += 2;
-        }
-      }
+      sample = Math.max(-1, Math.min(1, sample));
+      view.setInt16(
+        offset,
+        sample < 0 ? sample * 0x8000 : sample * 0x7fff,
+        true
+      );
+      offset += 2;
     }
   }
 
-  return new Blob([arrayBuffer], { type: "audio/wav" });
+  return new Blob([view], { type: "audio/wav" });
 }
