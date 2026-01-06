@@ -1,151 +1,143 @@
 import WaveSurfer from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js";
-import RegionsPlugin from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/regions.esm.js";
-import TimelinePlugin from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/timeline.esm.js";
 
-// =====================
-// WAVESURFER INIT
-// =====================
-const regions = RegionsPlugin.create();
-const timeline = TimelinePlugin.create({
-  container: "#timeline",
-  timeInterval: 1,
-  primaryLabelInterval: 5,
-  secondaryLabelInterval: 1
-});
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const resultsContainer = document.getElementById("results");
 
-const waveSurfer = WaveSurfer.create({
-  container: "#waveform",
-  height: 140,
+let activePlayer = null;
 
-  waveColor: "#4aa3ff",
-  progressColor: "#1e6fd9",
-  cursorColor: "#ffffff",
+const mockResults = [
+  { id: 1, title: "Deep House Loop", genre: "House", bpm: 128, duration: "4:32", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+  { id: 2, title: "Jazz Piano", genre: "Jazz", bpm: 120, duration: "3:15", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+  { id: 3, title: "Rock Drums", genre: "Rock", bpm: 140, duration: "2:48", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+  { id: 4, title: "Ambient Pad", genre: "Ambient", bpm: 90, duration: "5:12", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+  { id: 5, title: "Hip Hop Beat", genre: "Hip Hop", bpm: 95, duration: "3:30", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
+  { id: 6, title: "Techno Bass", genre: "Techno", bpm: 130, duration: "4:00", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
+  { id: 7, title: "Acoustic Guitar", genre: "Folk", bpm: 110, duration: "3:45", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" },
+  { id: 8, title: "Synth Lead", genre: "Electronic", bpm: 125, duration: "2:20", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" }
+];
 
-  normalize: false,
-  fillParent: true,
+function filterResults(query) {
+  if (!query.trim()) return mockResults;
+  const lowerQuery = query.toLowerCase();
+  return mockResults.filter(item => 
+    item.title.toLowerCase().includes(lowerQuery) ||
+    item.genre.toLowerCase().includes(lowerQuery)
+  );
+}
 
-  // maximum visual fidelity
-  minPxPerSec: 5,
-  barWidth: 1,
-  barGap: 0,
-  barRadius: 0,
+function stopActivePlayer() {
+  if (activePlayer) {
+    activePlayer.pause();
+    activePlayer = null;
+  }
+}
 
-  autoScroll: true,
-  interact: true,
-  plugins: [regions, timeline]
-});
+function createPlayer(audioUrl, container) {
+  const player = WaveSurfer.create({
+    container: container,
+    height: 80,
+    waveColor: "#4aa3ff",
+    progressColor: "#1e6fd9",
+    cursorColor: "#ffffff",
+    barWidth: 2,
+    barGap: 1,
+    barRadius: 1,
+    normalize: true,
+    interact: true
+  });
 
-// =====================
-// FILE LOAD
-// =====================
-const fileInput = document.getElementById("fileInput");
+  player.load(audioUrl);
+  return player;
+}
 
-fileInput.addEventListener("change", e => {
-  const file = e.target.files[0];
-  if (!file) return;
+function createResultCard(item) {
+  const card = document.createElement("div");
+  card.className = "result-card";
+  
+  const waveformId = `waveform-${item.id}`;
+  
+  card.innerHTML = `
+    <div class="card-header">
+      <h3>${item.title}</h3>
+      <div class="meta">
+        <span class="genre">${item.genre}</span>
+        <span class="bpm">${item.bpm} BPM</span>
+        <span class="duration">${item.duration}</span>
+      </div>
+    </div>
+    <div id="${waveformId}" class="waveform-container"></div>
+    <div class="card-controls">
+      <button class="play-btn" data-id="${item.id}">▶ Play</button>
+      <button class="stop-btn" data-id="${item.id}">⏹ Stop</button>
+    </div>
+  `;
 
-  if (waveSurfer._objectUrl) {
-    URL.revokeObjectURL(waveSurfer._objectUrl);
+  const playBtn = card.querySelector(".play-btn");
+  const stopBtn = card.querySelector(".stop-btn");
+  const waveformContainer = card.querySelector(`#${waveformId}`);
+  
+  let player = null;
+  let isPlaying = false;
+
+  player = createPlayer(item.url, waveformContainer);
+
+  playBtn.addEventListener("click", () => {
+    if (isPlaying) {
+      player.pause();
+      playBtn.textContent = "▶ Play";
+      isPlaying = false;
+      activePlayer = null;
+    } else {
+      stopActivePlayer();
+      player.play();
+      playBtn.textContent = "⏸ Pause";
+      isPlaying = true;
+      activePlayer = player;
+    }
+  });
+
+  stopBtn.addEventListener("click", () => {
+    player.stop();
+    playBtn.textContent = "▶ Play";
+    isPlaying = false;
+    activePlayer = null;
+  });
+
+  player.on("finish", () => {
+    playBtn.textContent = "▶ Play";
+    isPlaying = false;
+    activePlayer = null;
+  });
+
+  return card;
+}
+
+function renderResults(results) {
+  resultsContainer.innerHTML = "";
+  
+  if (results.length === 0) {
+    resultsContainer.innerHTML = '<div class="no-results">No results found</div>';
+    return;
   }
 
-  const url = URL.createObjectURL(file);
-  waveSurfer._objectUrl = url;
-  waveSurfer.load(url);
-});
-
-// =====================
-// TRANSPORT
-// =====================
-document.getElementById("play").onclick = () => waveSurfer.playPause();
-document.getElementById("stop").onclick = () => waveSurfer.stop();
-
-// =====================
-// VOLUME / MUTE (PREVIEW LEVEL)
-// =====================
-const volumeSlider = document.getElementById("volume");
-const muteBtn = document.getElementById("mute");
-
-let lastVolume = Number(volumeSlider.value);
-let muted = false;
-
-volumeSlider.oninput = e => {
-  const value = Number(e.target.value);
-  lastVolume = value;
-
-  if (!muted) {
-    waveSurfer.setVolume(value);
-  }
-};
-
-muteBtn.onclick = () => {
-  muted = !muted;
-
-  if (muted) {
-    waveSurfer.setVolume(0);
-    muteBtn.textContent = "Unmute";
-  } else {
-    waveSurfer.setVolume(lastVolume);
-    muteBtn.textContent = "Mute";
-  }
-};
-// =====================
-// ZOOM
-// =====================
-const zoomSlider = document.getElementById("zoom");
-
-zoomSlider.oninput = e => {
-  const sliderValue = Number(e.target.value);
-
-  // push WaveSurfer to its ceiling
-  const minZoom = 5;        // overview
-  const maxZoom = 50000;    // extreme detail illusion
-
-  const zoom =
-    minZoom *
-    Math.pow(maxZoom / minZoom, sliderValue / 100);
-
-  waveSurfer.zoom(zoom);
-};
-
-// =====================
-// REGIONS (SELECTION / CLIPS)
-// =====================
-
-// helper: remove all regions except one
-function clearRegionsExcept(keepRegion) {
-  Object.values(regions.getRegions()).forEach(r => {
-    if (r !== keepRegion) r.remove();
+  results.forEach(item => {
+    const card = createResultCard(item);
+    resultsContainer.appendChild(card);
   });
 }
 
-waveSurfer.on("ready", () => {
-  regions.enableDragSelection({
-    color: "rgba(74,163,255,0.3)"
-  });
+function performSearch() {
+  const query = searchInput.value;
+  const results = filterResults(query);
+  renderResults(results);
+}
+
+searchBtn.addEventListener("click", performSearch);
+searchInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    performSearch();
+  }
 });
 
-// keep only the newest region
-regions.on("region-created", region => {
-  clearRegionsExcept(region);
-  region.loop = true;
-});
-
-// loop playback
-regions.on("region-out", region => {
-  if (region.loop) region.play();
-});
-
-// =====================
-// CLEAR REGION ON EMPTY WAVEFORM CLICK
-// =====================
-waveSurfer.on("click", () => {
-  Object.values(regions.getRegions()).forEach(r => r.remove());
-});
-
-// =====================
-// CLEAR REGION ON EMPTY WAVEFORM CLICK
-// =====================
-waveSurfer.on("click", () => {
-  Object.values(regions.getRegions()).forEach(r => r.remove());
-});
-Z
+renderResults(mockResults);

@@ -2,42 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Web DAW – Audio Edits Core</title>
+  <title>Audio Search & Preview</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- WaveSurfer -->
-  <script type="module" src="script.js"></script>
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="container">
+    <header>
+      <h1>Audio Search</h1>
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search audio files..." autocomplete="off" />
+        <button id="searchBtn">Search</button>
+      </div>
+    </header>
 
-  <h1>Web DAW – Editorss Core</h1>
-
-  <!-- Transport -->
-  <div class="controls">
-    <input type="file" id="fileInput" accept="audio/*" />
-    <button id="play">Play / Pause</button>
-    <button id="stop">Stop</button>
-
-    <label>
-      Volume
-      <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
-    </label>
-
-    <button id="mute">Mute</button>
-
-    <label>
-      Zoom
-      <input type="range" id="zoom" min="0" max="100" step="1" value="35" />
-    </label>
+    <div id="results" class="results-grid"></div>
   </div>
 
-  <!-- Timeline -->
-  <div id="timeline"></div>
-
-  <!-- Waveform -->
-  <div id="waveform"></div>
-
+  <script type="module" src="script.js"></script>
 </body>
 </html>
