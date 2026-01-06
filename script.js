@@ -2,13 +2,14 @@ import WaveSurfer from "https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesu
 
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
-const genreFilter = document.getElementById("genreFilter");
-const bpmFilter = document.getElementById("bpmFilter");
+const categoryFilter = document.getElementById("categoryFilter");
+const durationFilter = document.getElementById("durationFilter");
 const resultsContainer = document.getElementById("results");
 const uploadBtn = document.getElementById("uploadBtn");
 const uploadModal = document.getElementById("uploadModal");
 const closeModal = document.getElementById("closeModal");
 const uploadForm = document.getElementById("uploadForm");
+const libraryBtn = document.getElementById("libraryBtn");
 
 let sounds = JSON.parse(localStorage.getItem("sounds") || "[]");
 let activePlayer = null;
@@ -16,14 +17,14 @@ let nextId = Math.max(0, ...sounds.map(s => s.id || 0)) + 1;
 
 if (sounds.length === 0) {
   sounds = [
-    { id: 1, title: "Deep House Loop", genre: "House", bpm: 128, duration: "4:32", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", uploadDate: new Date().toISOString() },
-    { id: 2, title: "Jazz Piano", genre: "Jazz", bpm: 120, duration: "3:15", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", uploadDate: new Date().toISOString() },
-    { id: 3, title: "Rock Drums", genre: "Rock", bpm: 140, duration: "2:48", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", uploadDate: new Date().toISOString() },
-    { id: 4, title: "Ambient Pad", genre: "Ambient", bpm: 90, duration: "5:12", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", uploadDate: new Date().toISOString() },
-    { id: 5, title: "Hip Hop Beat", genre: "Hip Hop", bpm: 95, duration: "3:30", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", uploadDate: new Date().toISOString() },
-    { id: 6, title: "Techno Bass", genre: "Techno", bpm: 130, duration: "4:00", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", uploadDate: new Date().toISOString() },
-    { id: 7, title: "Trap 808", genre: "Trap", bpm: 140, duration: "3:20", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", uploadDate: new Date().toISOString() },
-    { id: 8, title: "Dubstep Wobble", genre: "Dubstep", bpm: 140, duration: "4:15", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", uploadDate: new Date().toISOString() }
+    { id: 1, title: "Door Creak", category: "Foley", duration: "2.3", tags: ["door", "creak", "wood"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", uploadDate: new Date().toISOString() },
+    { id: 2, title: "Forest Ambience", category: "Ambience", duration: "45.2", tags: ["forest", "nature", "birds"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3", uploadDate: new Date().toISOString() },
+    { id: 3, title: "Button Click", category: "UI", duration: "0.3", tags: ["ui", "click", "button"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3", uploadDate: new Date().toISOString() },
+    { id: 4, title: "Rain Drops", category: "Nature", duration: "12.5", tags: ["rain", "water", "weather"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3", uploadDate: new Date().toISOString() },
+    { id: 5, title: "Car Engine", category: "Vehicle", duration: "8.7", tags: ["car", "engine", "vehicle"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3", uploadDate: new Date().toISOString() },
+    { id: 6, title: "Footsteps", category: "Foley", duration: "3.2", tags: ["footsteps", "walking", "foley"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3", uploadDate: new Date().toISOString() },
+    { id: 7, title: "Dog Bark", category: "Animal", duration: "1.1", tags: ["dog", "bark", "animal"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3", uploadDate: new Date().toISOString() },
+    { id: 8, title: "Typewriter", category: "Mechanical", duration: "5.4", tags: ["typewriter", "mechanical", "typing"], url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3", uploadDate: new Date().toISOString() }
   ];
   localStorage.setItem("sounds", JSON.stringify(sounds));
 }
@@ -35,50 +36,55 @@ function stopActivePlayer() {
   }
 }
 
-function getBpmRange(bpm) {
-  if (bpm < 90) return "60-90";
-  if (bpm < 120) return "90-120";
-  if (bpm < 140) return "120-140";
-  return "140+";
+function getDurationCategory(duration) {
+  const dur = parseFloat(duration);
+  if (dur < 5) return "short";
+  if (dur < 30) return "medium";
+  return "long";
 }
 
-function filterSounds(query, genre, bpm) {
+function formatDuration(seconds) {
+  const dur = parseFloat(seconds);
+  if (dur < 60) {
+    return `${dur.toFixed(1)}s`;
+  }
+  const mins = Math.floor(dur / 60);
+  const secs = Math.floor(dur % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function filterSounds(query, category, duration) {
   let filtered = sounds;
 
   if (query.trim()) {
     const lowerQuery = query.toLowerCase();
-    filtered = filtered.filter(item => 
-      item.title.toLowerCase().includes(lowerQuery) ||
-      item.genre.toLowerCase().includes(lowerQuery)
-    );
-  }
-
-  if (genre) {
-    filtered = filtered.filter(item => item.genre === genre);
-  }
-
-  if (bpm) {
     filtered = filtered.filter(item => {
-      const itemBpmRange = getBpmRange(item.bpm);
-      return itemBpmRange === bpm;
+      const titleMatch = item.title.toLowerCase().includes(lowerQuery);
+      const tagMatch = item.tags && item.tags.some(tag => tag.toLowerCase().includes(lowerQuery));
+      return titleMatch || tagMatch;
+    });
+  }
+
+  if (category) {
+    filtered = filtered.filter(item => item.category === category);
+  }
+
+  if (duration) {
+    filtered = filtered.filter(item => {
+      const itemDuration = getDurationCategory(item.duration);
+      return itemDuration === duration;
     });
   }
 
   return filtered;
 }
 
-function formatDuration(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
 function createPlayer(audioUrl, container) {
   const player = WaveSurfer.create({
     container: container,
-    height: 80,
-    waveColor: "#4aa3ff",
-    progressColor: "#1e6fd9",
+    height: 70,
+    waveColor: "#6366f1",
+    progressColor: "#4f46e5",
     cursorColor: "#ffffff",
     barWidth: 2,
     barGap: 1,
@@ -105,14 +111,17 @@ function createResultCard(item) {
   card.className = "result-card";
   
   const waveformId = `waveform-${item.id}`;
+  const tagsHtml = item.tags ? item.tags.map(tag => `<span class="tag">${tag}</span>`).join("") : "";
   
   card.innerHTML = `
     <div class="card-header">
-      <h3>${item.title}</h3>
-      <div class="meta">
-        <span class="genre">${item.genre}</span>
-        <span class="bpm">${item.bpm} BPM</span>
-        <span class="duration">${item.duration || "N/A"}</span>
+      <div class="card-title-row">
+        <h3>${item.title}</h3>
+        <span class="duration-badge">${formatDuration(item.duration)}</span>
+      </div>
+      <div class="card-meta">
+        <span class="category">${item.category}</span>
+        ${tagsHtml ? `<div class="tags">${tagsHtml}</div>` : ""}
       </div>
     </div>
     <div id="${waveformId}" class="waveform-container"></div>
@@ -172,7 +181,7 @@ function renderResults(results) {
   resultsContainer.innerHTML = "";
   
   if (results.length === 0) {
-    resultsContainer.innerHTML = '<div class="no-results">No loops found</div>';
+    resultsContainer.innerHTML = '<div class="no-results">No sound effects found</div>';
     return;
   }
 
@@ -184,9 +193,9 @@ function renderResults(results) {
 
 function performSearch() {
   const query = searchInput.value;
-  const genre = genreFilter.value;
-  const bpm = bpmFilter.value;
-  const results = filterSounds(query, genre, bpm);
+  const category = categoryFilter.value;
+  const duration = durationFilter.value;
+  const results = filterSounds(query, category, duration);
   renderResults(results);
 }
 
@@ -206,22 +215,22 @@ uploadForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   
   const title = document.getElementById("uploadTitle").value;
-  const genre = document.getElementById("uploadGenre").value;
-  const bpm = parseInt(document.getElementById("uploadBpm").value);
+  const category = document.getElementById("uploadCategory").value;
+  const tagsInput = document.getElementById("uploadTags").value;
   const file = document.getElementById("uploadFile").files[0];
   
   if (!file) return;
   
   const duration = await getAudioDuration(file);
-  const durationStr = formatDuration(duration);
   const url = URL.createObjectURL(file);
+  const tags = tagsInput ? tagsInput.split(",").map(t => t.trim()).filter(t => t) : [];
   
   const newSound = {
     id: nextId++,
     title,
-    genre,
-    bpm,
-    duration: durationStr,
+    category,
+    duration: duration.toString(),
+    tags,
     url,
     uploadDate: new Date().toISOString()
   };
@@ -248,6 +257,13 @@ uploadModal.addEventListener("click", (e) => {
   }
 });
 
+libraryBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  categoryFilter.value = "";
+  durationFilter.value = "";
+  renderResults(sounds);
+});
+
 searchBtn.addEventListener("click", performSearch);
 searchInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
@@ -255,7 +271,7 @@ searchInput.addEventListener("keypress", (e) => {
   }
 });
 
-genreFilter.addEventListener("change", performSearch);
-bpmFilter.addEventListener("change", performSearch);
+categoryFilter.addEventListener("change", performSearch);
+durationFilter.addEventListener("change", performSearch);
 
 renderResults(sounds);
