@@ -165,20 +165,35 @@ renderBtn.onclick = async () => {
   const endTime = hasRegion ? regionList[0].end : audioBuffer.duration;
 
   const sampleRate = audioBuffer.sampleRate;
-  const startSample = Math.floor(startTime * sampleRate);
-  const endSample = Math.floor(endTime * sampleRate);
-  const frameCount = endSample - startSample;
+const startSample = Math.floor(startTime * sampleRate);
+const endSample = Math.floor(endTime * sampleRate);
+const frameCount = endSample - startSample;
 
-  const offlineCtx = new OfflineAudioContext(
-    audioBuffer.numberOfChannels,
-    frameCount,
-    sampleRate
-  );
+// create sliced buffer
+const slicedBuffer = new AudioBuffer({
+  length: frameCount,
+  numberOfChannels: audioBuffer.numberOfChannels,
+  sampleRate
+});
 
-  const source = offlineCtx.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(offlineCtx.destination);
-  source.start(0, startTime, endTime - startTime);
+for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+  slicedBuffer
+    .getChannelData(ch)
+    .set(
+      audioBuffer.getChannelData(ch).slice(startSample, endSample)
+    );
+}
+
+const offlineCtx = new OfflineAudioContext(
+  slicedBuffer.numberOfChannels,
+  slicedBuffer.length,
+  sampleRate
+);
+
+const source = offlineCtx.createBufferSource();
+source.buffer = slicedBuffer;
+source.connect(offlineCtx.destination);
+source.start(0);
 
   const renderedBuffer = await offlineCtx.startRendering();
 
