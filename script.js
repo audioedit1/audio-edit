@@ -194,14 +194,55 @@ renderBtn.onclick = async () => {
 };
 
 // =====================
-// WAV ENCODER (16-bit PCM)
+// WAV ENCODERS
+// 32-bit float / 24-bit dither / 16-bit dither
 // =====================
-function bufferToWav(buffer) {
-  const numChannels = buffer.numberOfChannels;
-  const length = buffer.length * numChannels * 2 + 44;
-  const arrayBuffer = new ArrayBuffer(length);
-  const view = new DataView(arrayBuffer);
 
+function bufferToWav32Float(buffer) {
+  return encodeWav(buffer, "float32");
+}
+
+function bufferToWav24BitDither(buffer) {
+  return encodeWav(buffer, "pcm24-dither");
+}
+
+function bufferToWav16BitDither(buffer) {
+  return encodeWav(buffer, "pcm16-dither");
+}
+
+// =====================
+// CORE WAV ENCODER
+// =====================
+function encodeWav(buffer, mode) {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const numFrames = buffer.length;
+
+  let bytesPerSample;
+  let formatTag;
+  let bitDepth;
+
+  if (mode === "float32") {
+    bytesPerSample = 4;
+    formatTag = 3; // IEEE float
+    bitDepth = 32;
+  } else if (mode === "pcm24-dither") {
+    bytesPerSample = 3;
+    formatTag = 1; // PCM
+    bitDepth = 24;
+  } else {
+    bytesPerSample = 2;
+    formatTag = 1; // PCM
+    bitDepth = 16;
+  }
+
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numFrames * blockAlign;
+  const bufferSize = 44 + dataSize;
+
+  const arrayBuffer = new ArrayBuffer(bufferSize);
+  const view = new DataView(arrayBuffer);
   let offset = 0;
 
   function writeString(str) {
@@ -210,39 +251,65 @@ function bufferToWav(buffer) {
     }
   }
 
+  // RIFF
   writeString("RIFF");
-  view.setUint32(offset, 36 + buffer.length * numChannels * 2, true);
+  view.setUint32(offset, 36 + dataSize, true);
   offset += 4;
   writeString("WAVE");
+
+  // fmt
   writeString("fmt ");
   view.setUint32(offset, 16, true);
   offset += 4;
-  view.setUint16(offset, 1, true);
+  view.setUint16(offset, formatTag, true);
   offset += 2;
   view.setUint16(offset, numChannels, true);
   offset += 2;
-  view.setUint32(offset, buffer.sampleRate, true);
+  view.setUint32(offset, sampleRate, true);
   offset += 4;
-  view.setUint32(offset, buffer.sampleRate * numChannels * 2, true);
+  view.setUint32(offset, byteRate, true);
   offset += 4;
-  view.setUint16(offset, numChannels * 2, true);
+  view.setUint16(offset, blockAlign, true);
   offset += 2;
-  view.setUint16(offset, 16, true);
+  view.setUint16(offset, bitDepth, true);
   offset += 2;
+
+  // data
   writeString("data");
-  view.setUint32(offset, buffer.length * numChannels * 2, true);
+  view.setUint32(offset, dataSize, true);
   offset += 4;
 
-  const channels = [];
-  for (let i = 0; i < numChannels; i++) {
-    channels.push(buffer.getChannelData(i));
-  }
-
-  for (let i = 0; i < buffer.length; i++) {
+  // write samples
+  for (let i = 0; i < numFrames; i++) {
     for (let ch = 0; ch < numChannels; ch++) {
-      let sample = Math.max(-1, Math.min(1, channels[ch][i]));
-      view.setInt16(offset, sample * 0x7fff, true);
-      offset += 2;
+      let sample = buffer.getChannelData(ch)[i];
+
+      if (formatTag === 3) {
+        // 32-bit float
+        view.setFloat32(offset, sample, true);
+        offset += 4;
+      } else {
+        // PCM with TPDF dither
+        const dither =
+          (Math.random() - Math.random()) *
+          (1 / (1 << (bitDepth - 1)));
+
+        sample = Math.max(-1, Math.min(1, sample + dither));
+
+        if (bitDepth === 24) {
+          let intSample = Math.round(sample * 0x7fffff);
+          view.setUint8(offset++, intSample & 0xff);
+          view.setUint8(offset++, (intSample >> 8) & 0xff);
+          view.setUint8(offset++, (intSample >> 16) & 0xff);
+        } else {
+          view.setInt16(
+            offset,
+            Math.round(sample * 0x7fff),
+            true
+          );
+          offset += 2;
+        }
+      }
     }
   }
 
