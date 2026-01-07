@@ -47,23 +47,41 @@ waveSurfer.on("decode", buffer => {
 
 function getWavSampleRate(arrayBuffer) {
   try {
-    if (!arrayBuffer || arrayBuffer.byteLength < 28) return null;
+    if (!arrayBuffer || arrayBuffer.byteLength < 12) return null;
     const view = new DataView(arrayBuffer);
-    const riff = String.fromCharCode(
-      view.getUint8(0),
-      view.getUint8(1),
-      view.getUint8(2),
-      view.getUint8(3)
-    );
-    const wave = String.fromCharCode(
-      view.getUint8(8),
-      view.getUint8(9),
-      view.getUint8(10),
-      view.getUint8(11)
-    );
+
+    const readFourCC = offset =>
+      String.fromCharCode(
+        view.getUint8(offset),
+        view.getUint8(offset + 1),
+        view.getUint8(offset + 2),
+        view.getUint8(offset + 3)
+      );
+
+    const riff = readFourCC(0);
+    const wave = readFourCC(8);
     if (riff !== "RIFF" || wave !== "WAVE") return null;
-    const sampleRate = view.getUint32(24, true);
-    return Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : null;
+
+    // WAV is chunked. Don't assume fmt is at a fixed offset.
+    // Walk chunks until we find the 'fmt ' chunk, then read sampleRate.
+    let offset = 12;
+    while (offset + 8 <= view.byteLength) {
+      const chunkId = readFourCC(offset);
+      const chunkSize = view.getUint32(offset + 4, true);
+      const chunkDataOffset = offset + 8;
+
+      if (chunkId === "fmt ") {
+        if (chunkSize < 16 || chunkDataOffset + 16 > view.byteLength) return null;
+        const sampleRate = view.getUint32(chunkDataOffset + 4, true);
+        return Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : null;
+      }
+
+      // Chunks are padded to even sizes.
+      const paddedSize = chunkSize + (chunkSize % 2);
+      offset = chunkDataOffset + paddedSize;
+    }
+
+    return null;
   } catch {
     return null;
   }
