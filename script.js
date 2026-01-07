@@ -138,7 +138,16 @@ fileInput.addEventListener("change", e => {
 // TRANSPORT
 // =====================
 document.getElementById("play").onclick = () => waveSurfer.playPause();
-document.getElementById("stop").onclick = () => waveSurfer.stop();
+
+let userStopRequested = false;
+document.getElementById("stop").onclick = () => {
+  // Prevent region looping logic from immediately restarting playback
+  userStopRequested = true;
+  waveSurfer.stop();
+  queueMicrotask(() => {
+    userStopRequested = false;
+  });
+};
 
 // =====================
 // VOLUME / MUTE (PREVIEW LEVEL)
@@ -213,6 +222,10 @@ regions.on("region-created", region => {
 
 // loop playback
 regions.on("region-out", region => {
+  // When stopping, WaveSurfer seeks (often to 0), which can trigger region-out.
+  // Guard against that so Stop always stops.
+  if (userStopRequested) return;
+  if (!waveSurfer.isPlaying?.()) return;
   if (region.loop) region.play();
 });
 
@@ -280,7 +293,7 @@ function audioBufferToWav(buffer) {
   const numberOfChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
   const bytesPerSample = 2; // PCM16
-  const blockAlign = numberOfChannels * bytesPerSample;
+  const blockAlign = numberOfChannels * bytesPerSample; 
   const byteRate = sampleRate * blockAlign;
   const dataSize = length * blockAlign;
   const fileSize = 44 + dataSize;
