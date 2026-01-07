@@ -268,8 +268,46 @@ async function exportAudio() {
       return;
     }
 
+    // Region-aware export:
+    // - If exactly one region exists, export only that region.
+    // - If no region exists, export the full audio buffer.
+    const existingRegions = Object.values(regions.getRegions?.() || {});
+    let bufferToExport = audioBuffer;
+
+    if (existingRegions.length === 1) {
+      const region = existingRegions[0];
+      const startSeconds = Number(region?.start ?? 0);
+      const endSeconds = Number(region?.end ?? 0);
+
+      const durationSeconds = audioBuffer.duration;
+      const safeStart = Math.max(0, Math.min(durationSeconds, startSeconds));
+      const safeEnd = Math.max(0, Math.min(durationSeconds, endSeconds));
+      const startTime = Math.min(safeStart, safeEnd);
+      const endTime = Math.max(safeStart, safeEnd);
+
+      const startFrame = Math.max(0, Math.min(audioBuffer.length, Math.floor(startTime * audioBuffer.sampleRate)));
+      const endFrame = Math.max(0, Math.min(audioBuffer.length, Math.floor(endTime * audioBuffer.sampleRate)));
+      const frameCount = Math.max(0, endFrame - startFrame);
+
+      if (frameCount > 0) {
+        const sliced = new AudioBuffer({
+          length: frameCount,
+          numberOfChannels: audioBuffer.numberOfChannels,
+          sampleRate: audioBuffer.sampleRate
+        });
+
+        for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+          const src = audioBuffer.getChannelData(ch);
+          const dst = sliced.getChannelData(ch);
+          dst.set(src.subarray(startFrame, endFrame));
+        }
+
+        bufferToExport = sliced;
+      }
+    }
+
     // Convert AudioBuffer to WAV
-    const wav = audioBufferToWav(audioBuffer);
+    const wav = audioBufferToWav(bufferToExport);
     const blob = new Blob([wav], { type: "audio/wav" });
     const url = URL.createObjectURL(blob); 
     
