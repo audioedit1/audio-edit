@@ -313,6 +313,47 @@ async function exportAudio() {
       bufferToExport = audioBuffer;
     }
 
+    // Export-only fades (preview playback remains unchanged because we don't mutate WaveSurfer buffers)
+    // Apply a short linear fade-in/out to avoid clicks at export boundaries.
+    {
+      const fadeMs = 5;
+      const fadeSamplesRequested = Math.floor((bufferToExport.sampleRate * fadeMs) / 1000);
+      const fadeSamples = Math.max(
+        0,
+        Math.min(fadeSamplesRequested, Math.floor(bufferToExport.length / 2))
+      );
+
+      if (fadeSamples > 0) {
+        const faded = new AudioBuffer({
+          length: bufferToExport.length,
+          numberOfChannels: bufferToExport.numberOfChannels,
+          sampleRate: bufferToExport.sampleRate
+        });
+
+        const denom = fadeSamples - 1;
+        for (let ch = 0; ch < bufferToExport.numberOfChannels; ch++) {
+          const src = bufferToExport.getChannelData(ch);
+          const dst = faded.getChannelData(ch);
+          dst.set(src);
+
+          // Fade-in
+          for (let i = 0; i < fadeSamples; i++) {
+            const gain = denom > 0 ? i / denom : 0;
+            dst[i] *= gain;
+          }
+
+          // Fade-out
+          for (let i = 0; i < fadeSamples; i++) {
+            const gain = denom > 0 ? (denom - i) / denom : 0;
+            const idx = bufferToExport.length - fadeSamples + i;
+            dst[idx] *= gain;
+          }
+        }
+
+        bufferToExport = faded;
+      }
+    }
+
     // Convert AudioBuffer to WAV
     const wav = audioBufferToWav(bufferToExport);
     const blob = new Blob([wav], { type: "audio/wav" });
