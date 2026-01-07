@@ -37,12 +37,55 @@ const waveSurfer = WaveSurfer.create({
 
 // Store decoded audio so export is reliable
 let decodedBuffer = null;
+let sourceDecodedBuffer = null;
 waveSurfer.on("ready", () => {
   decodedBuffer = waveSurfer.getDecodedData?.() || decodedBuffer;
 });
 waveSurfer.on("decode", buffer => {
   decodedBuffer = buffer;
 });
+
+function getWavSampleRate(arrayBuffer) {
+  try {
+    if (!arrayBuffer || arrayBuffer.byteLength < 28) return null;
+    const view = new DataView(arrayBuffer);
+    const riff = String.fromCharCode(
+      view.getUint8(0),
+      view.getUint8(1),
+      view.getUint8(2),
+      view.getUint8(3)
+    );
+    const wave = String.fromCharCode(
+      view.getUint8(8),
+      view.getUint8(9),
+      view.getUint8(10),
+      view.getUint8(11)
+    );
+    if (riff !== "RIFF" || wave !== "WAVE") return null;
+    const sampleRate = view.getUint32(24, true);
+    return Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : null;
+  } catch {
+    return null;
+  }
+}
+
+async function decodeOriginalFileToBuffer(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const wavSampleRate = getWavSampleRate(arrayBuffer);
+
+  const audioContext = wavSampleRate
+    ? new AudioContext({ sampleRate: wavSampleRate })
+    : new AudioContext();
+
+  try {
+    // Some browsers detach the ArrayBuffer during decode; pass a copy to be safe
+    const copy = arrayBuffer.slice(0);
+    const buffer = await audioContext.decodeAudioData(copy);
+    return buffer;
+  } finally {
+    await audioContext.close();
+  }
+}
 
 // =====================
 // FILE LOAD
@@ -56,10 +99,21 @@ fileInput.addEventListener("change", e => {
   if (!file) return;
 
   originalFile = file;
+  sourceDecodedBuffer = null;
 
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(file);
   waveSurfer.load(objectUrl);
+
+  // Option B: decode the original upload ourselves for highest-fidelity export
+  decodeOriginalFileToBuffer(file)
+    .then(buffer => {
+      sourceDecodedBuffer = buffer;
+    })
+    .catch(err => {
+      console.error("Original decode error:", err);
+      sourceDecodedBuffer = null;
+    });
 });
 
 // =====================
@@ -163,8 +217,8 @@ async function exportAudio() {
   }
 
   try {
-    // Prefer a stored decoded buffer (more reliable than calling getDecodedData() ad-hoc)
-    const audioBuffer = decodedBuffer || waveSurfer.getDecodedData?.();
+    // Prefer decoding the original file (best fidelity), then fall back to WaveSurfer's decoded buffer
+    const audioBuffer = sourceDecodedBuffer || decodedBuffer || waveSurfer.getDecodedData?.();
     
     if (!audioBuffer) {
       // Fallback: export original file if buffer not available
@@ -186,7 +240,7 @@ async function exportAudio() {
     // Convert AudioBuffer to WAV
     const wav = audioBufferToWav(audioBuffer);
     const blob = new Blob([wav], { type: "audio/wav" });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob); 
     
     const a = document.createElement("a");
     a.href = url;
