@@ -241,6 +241,14 @@ waveSurfer.on("click", () => {
 // =====================
 const exportBtn = document.getElementById("export");
 
+function is24BitExportSelected() {
+  return document.querySelector('input[name="exportBitDepth"]:checked')?.value === "24";
+}
+
+// Dormant alternative export/render path (default OFF).
+// Scaffold only: do not use OfflineAudioContext yet (no nodes, no startRendering).
+const EXPORT_OFFLINE_RENDER = false;
+
 async function exportAudio() {
   if (!waveSurfer.getDuration()) {
     alert("Please load an audio file first.");
@@ -314,48 +322,59 @@ async function exportAudio() {
     }
 
     // Export-only fades (preview playback remains unchanged because we don't mutate WaveSurfer buffers)
-    // Apply a short linear fade-in/out to avoid clicks at export boundaries.
-    {
-      const fadeMs = 5;
-      const fadeSamplesRequested = Math.floor((bufferToExport.sampleRate * fadeMs) / 1000);
-      const fadeSamples = Math.max(
-        0,
-        Math.min(fadeSamplesRequested, Math.floor(bufferToExport.length / 2))
-      );
+    // Default behavior stays identical.
+    // - 16-bit path: uses OfflineAudioContext only when EXPORT_OFFLINE_RENDER is enabled
+    // - 24-bit path: always routes through OfflineAudioContext (do not reapply fades manually)
+    const export24Bit = is24BitExportSelected();
 
-      if (fadeSamples > 0) {
-        const faded = new AudioBuffer({
-          length: bufferToExport.length,
-          numberOfChannels: bufferToExport.numberOfChannels,
-          sampleRate: bufferToExport.sampleRate
-        });
+    if (EXPORT_OFFLINE_RENDER || export24Bit) {
+      bufferToExport = await renderWithOfflineAudioContext(bufferToExport);
+    } else {
+      // Apply a short linear fade-in/out to avoid clicks at export boundaries.
+      {
+        const fadeMs = 5;
+        const fadeSamplesRequested = Math.floor((bufferToExport.sampleRate * fadeMs) / 1000);
+        const fadeSamples = Math.max(
+          0,
+          Math.min(fadeSamplesRequested, Math.floor(bufferToExport.length / 2))
+        );
 
-        const denom = fadeSamples - 1;
-        for (let ch = 0; ch < bufferToExport.numberOfChannels; ch++) {
-          const src = bufferToExport.getChannelData(ch);
-          const dst = faded.getChannelData(ch);
-          dst.set(src);
+        if (fadeSamples > 0) {
+          const faded = new AudioBuffer({
+            length: bufferToExport.length,
+            numberOfChannels: bufferToExport.numberOfChannels,
+            sampleRate: bufferToExport.sampleRate
+          });
 
-          // Fade-in
-          for (let i = 0; i < fadeSamples; i++) {
-            const gain = denom > 0 ? i / denom : 0;
-            dst[i] *= gain;
+          const denom = fadeSamples - 1;
+          for (let ch = 0; ch < bufferToExport.numberOfChannels; ch++) {
+            const src = bufferToExport.getChannelData(ch);
+            const dst = faded.getChannelData(ch);
+            dst.set(src);
+
+            // Fade-in
+            for (let i = 0; i < fadeSamples; i++) {
+              const gain = denom > 0 ? i / denom : 0;
+              dst[i] *= gain;
+            }
+
+            // Fade-out
+            for (let i = 0; i < fadeSamples; i++) {
+              const gain = denom > 0 ? (denom - i) / denom : 0;
+              const idx = bufferToExport.length - fadeSamples + i;
+              dst[idx] *= gain;
+            }
           }
 
-          // Fade-out
-          for (let i = 0; i < fadeSamples; i++) {
-            const gain = denom > 0 ? (denom - i) / denom : 0;
-            const idx = bufferToExport.length - fadeSamples + i;
-            dst[idx] *= gain;
-          }
+          bufferToExport = faded;
         }
-
-        bufferToExport = faded;
       }
     }
 
     // Convert AudioBuffer to WAV
-    const wav = audioBufferToWav(bufferToExport);
+  // Default path stays 16-bit PCM WAV with TPDF dither.
+  // 24-bit path uses OfflineAudioContext render (above) and has no dither.
+  const wav = export24Bit ? audioBufferToWav24(bufferToExport) : audioBufferToWav(bufferToExport);
     const blob = new Blob([wav], { type: "audio/wav" });
     const url = URL.createObjectURL(blob); 
     
@@ -412,7 +431,10 @@ function audioBufferToWav(buffer) {
   let offset = 44;
   for (let i = 0; i < length; i++) {
     for (let ch = 0; ch < numberOfChannels; ch++) {
-      const sample = Math.max(-1, Math.min(1, channels[ch][i]));
+      // Export-only TPDF dither (±1 LSB) applied immediately before int16 quantization.
+      // Triangular PDF from two independent uniforms; no noise shaping.
+      const tpdf = (Math.random() + Math.random() - 1) * (1 / 32768);
+      const sample = Math.max(-1, Math.min(1, channels[ch][i] + tpdf));
       const int16 = sample < 0 ? Math.round(sample * 0x8000) : Math.round(sample * 0x7fff);
       view.setInt16(offset, int16, true);
       offset += 2;
@@ -420,6 +442,94 @@ function audioBufferToWav(buffer) {
   }
 
   return arrayBuffer;
+}
+
+// Helper: Convert AudioBuffer to 24-bit PCM WAV format (no dither)
+function audioBufferToWav24(buffer) {
+  const length = buffer.length; // sample-frames per channel
+  const numberOfChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const bytesPerSample = 3; // PCM24
+  const blockAlign = numberOfChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = length * blockAlign;
+  const fileSize = 44 + dataSize;
+  const arrayBuffer = new ArrayBuffer(fileSize);
+  const view = new DataView(arrayBuffer);
+
+  // WAV header
+  const writeString = (offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+
+  writeString(0, "RIFF");
+  view.setUint32(4, fileSize - 8, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true); // fmt chunk size
+  view.setUint16(20, 1, true); // audio format (1 = PCM)
+  view.setUint16(22, numberOfChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 24, true); // bits per sample
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  // Convert audio data
+  const channels = Array.from({ length: numberOfChannels }, (_, ch) => buffer.getChannelData(ch));
+  let offset = 44;
+  for (let i = 0; i < length; i++) {
+    for (let ch = 0; ch < numberOfChannels; ch++) {
+      const sample = Math.max(-1, Math.min(1, channels[ch][i]));
+      let int24 = sample < 0 ? Math.round(sample * 0x800000) : Math.round(sample * 0x7fffff);
+      int24 = Math.max(-0x800000, Math.min(0x7fffff, int24));
+
+      // Write signed 24-bit little-endian
+      view.setUint8(offset, int24 & 0xff);
+      view.setUint8(offset + 1, (int24 >> 8) & 0xff);
+      view.setUint8(offset + 2, (int24 >> 16) & 0xff);
+      offset += 3;
+    }
+  }
+
+  return arrayBuffer;
+}
+
+// OfflineAudioContext render path used for export-only fades when enabled.
+// This intentionally does not affect preview playback (export uses a rendered copy).
+async function renderWithOfflineAudioContext(buffer) {
+  // Keep fade duration and linear shape identical to the existing export-only fade.
+  const fadeMs = 5;
+  const sampleRate = buffer.sampleRate;
+  const fadeSamplesRequested = Math.floor((sampleRate * fadeMs) / 1000);
+  const fadeSamples = Math.max(0, Math.min(fadeSamplesRequested, Math.floor(buffer.length / 2)));
+
+  // Nothing to do for extremely short buffers.
+  if (fadeSamples <= 1) return buffer;
+
+  const denom = fadeSamples - 1;
+  const fadeInEndTime = denom / sampleRate;
+  const fadeOutStartTime = (buffer.length - fadeSamples) / sampleRate;
+  const fadeOutEndTime = (buffer.length - 1) / sampleRate;
+
+  const offline = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, sampleRate);
+  const source = offline.createBufferSource();
+  source.buffer = buffer;
+
+  const gain = offline.createGain();
+  source.connect(gain);
+  gain.connect(offline.destination);
+
+  gain.gain.setValueAtTime(0, 0);
+  gain.gain.linearRampToValueAtTime(1, fadeInEndTime);
+  gain.gain.setValueAtTime(1, fadeOutStartTime);
+  gain.gain.linearRampToValueAtTime(0, fadeOutEndTime);
+
+  source.start(0);
+  return await offline.startRendering();
 }
 
 exportBtn.onclick = exportAudio;
