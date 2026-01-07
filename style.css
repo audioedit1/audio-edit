@@ -240,6 +240,34 @@ input[type="range"] {
   font-variant-numeric: tabular-nums;
 }
 
+.sample-card__wave {
+  margin-top: 10px;
+  height: 28px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: #111;
+  border: 1px solid #2c84ff;
+}
+
+.sample-card__wave svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sample-card__wave rect {
+  fill: #2c84ff;
+  opacity: 0.9;
+}
+
+.sample-card__wave[data-variant="c"] rect {
+  opacity: 0.75;
+}
+
+.sample-card__wave[data-variant="d"] rect {
+  opacity: 0.65;
+}
+
 .sample-card__tags {
   margin-top: 10px;
   display: flex;
