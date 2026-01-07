@@ -59,15 +59,58 @@ input[type="range"] {
 }
 
 #exportStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 90px;
   font-size: 0.95rem;
-  opacity: 0.85;
+  line-height: 1.4;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border: 1px solid #ffffff;
+  border-radius: 999px;
+  opacity: 0.55;
+}
+
+#exportStatus:empty::before {
+  content: "Idle";
+}
+
+#exportStatus[data-state="running"],
+#exportStatus[data-state="success"],
+#exportStatus[data-state="error"] {
+  opacity: 1;
+}
+
+#exportStatus[data-state="running"] {
+  color: #2c84ff;
+  border-color: #2c84ff;
+  background: #111;
+  font-weight: 600;
+}
+
+#exportStatus[data-state="running"]::before {
+  content: "⏳";
 }
 
 #exportStatus[data-state="success"] {
-  opacity: 1;
+  color: #ffffff;
+  border-color: #1e6fd9;
+  background: #1e6fd9;
+  font-weight: 600;
+}
+
+#exportStatus[data-state="success"]::before {
+  content: "✓";
 }
 
 #exportStatus[data-state="error"] {
-  opacity: 1;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  background: #0e0e0e;
+  font-weight: 700;
+}
+
+#exportStatus[data-state="error"]::before {
+  content: "✕";
 }
