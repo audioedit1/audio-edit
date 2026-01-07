@@ -157,9 +157,8 @@ async function exportAudio() {
   }
 
   try {
-    // Get decoded audio data from WaveSurfer backend
-    const backend = waveSurfer.getBackend();
-    const audioBuffer = backend?.getDecodedData?.() || backend?.buffer;
+    // Get decoded audio data directly from WaveSurfer instance
+    const audioBuffer = waveSurfer.getDecodedData();
     
     if (!audioBuffer) {
       // Fallback: export original file if buffer not available
