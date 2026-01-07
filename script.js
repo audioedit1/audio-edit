@@ -35,6 +35,15 @@ const waveSurfer = WaveSurfer.create({
   plugins: [regions, timeline]
 });
 
+// Store decoded audio so export is reliable
+let decodedBuffer = null;
+waveSurfer.on("ready", () => {
+  decodedBuffer = waveSurfer.getDecodedData?.() || decodedBuffer;
+});
+waveSurfer.on("decode", buffer => {
+  decodedBuffer = buffer;
+});
+
 // =====================
 // FILE LOAD
 // =====================
@@ -154,8 +163,8 @@ async function exportAudio() {
   }
 
   try {
-    // Get decoded audio data directly from WaveSurfer instance
-    const audioBuffer = waveSurfer.getDecodedData();
+    // Prefer a stored decoded buffer (more reliable than calling getDecodedData() ad-hoc)
+    const audioBuffer = decodedBuffer || waveSurfer.getDecodedData?.();
     
     if (!audioBuffer) {
       // Fallback: export original file if buffer not available
@@ -170,7 +179,7 @@ async function exportAudio() {
         URL.revokeObjectURL(url);
         return;
       }
-      alert("Audio data not available. Please wait for the file to load completely.");
+      alert("Audio data not available yet. Please wait for the waveform to finish loading.");
       return;
     }
 
@@ -195,15 +204,15 @@ async function exportAudio() {
 
 // Helper: Convert AudioBuffer to WAV format
 function audioBufferToWav(buffer) {
-  const length = buffer.length;
+  const length = buffer.length; // sample-frames per channel
   const numberOfChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
-  const bytesPerSample = 2;
+  const bytesPerSample = 2; // PCM16
   const blockAlign = numberOfChannels * bytesPerSample;
   const byteRate = sampleRate * blockAlign;
   const dataSize = length * blockAlign;
-  const bufferSize = 44 + dataSize;
-  const arrayBuffer = new ArrayBuffer(bufferSize);
+  const fileSize = 44 + dataSize;
+  const arrayBuffer = new ArrayBuffer(fileSize);
   const view = new DataView(arrayBuffer);
 
   // WAV header
@@ -214,7 +223,7 @@ function audioBufferToWav(buffer) {
   };
 
   writeString(0, "RIFF");
-  view.setUint32(4, bufferSize - 8, true);
+  view.setUint32(4, fileSize - 8, true);
   writeString(8, "WAVE");
   writeString(12, "fmt ");
   view.setUint32(16, 16, true); // fmt chunk size
@@ -228,11 +237,13 @@ function audioBufferToWav(buffer) {
   view.setUint32(40, dataSize, true);
 
   // Convert audio data
+  const channels = Array.from({ length: numberOfChannels }, (_, ch) => buffer.getChannelData(ch));
   let offset = 44;
   for (let i = 0; i < length; i++) {
-    for (let channel = 0; channel < numberOfChannels; channel++) {
-      const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+    for (let ch = 0; ch < numberOfChannels; ch++) {
+      const sample = Math.max(-1, Math.min(1, channels[ch][i]));
+      const int16 = sample < 0 ? Math.round(sample * 0x8000) : Math.round(sample * 0x7fff);
+      view.setInt16(offset, int16, true);
       offset += 2;
     }
   }
