@@ -268,13 +268,16 @@ async function exportAudio() {
       return;
     }
 
-    // Region-aware export:
-    // - If exactly one region exists, export only that region.
-    // - If no region exists, export the full audio buffer.
+    // Export selection rule (locked):
+    // - If exactly one region exists, export that region
+    // - If no region exists, export the full buffer
+    // Any other case (e.g. multiple regions) exports the full buffer.
     const existingRegions = Object.values(regions.getRegions?.() || {});
-    let bufferToExport = audioBuffer;
+    let bufferToExport;
 
-    if (existingRegions.length === 1) {
+    if (existingRegions.length === 0) {
+      bufferToExport = audioBuffer;
+    } else if (existingRegions.length === 1) {
       const region = existingRegions[0];
       const startSeconds = Number(region?.start ?? 0);
       const endSeconds = Number(region?.end ?? 0);
@@ -303,7 +306,11 @@ async function exportAudio() {
         }
 
         bufferToExport = sliced;
+      } else {
+        bufferToExport = audioBuffer;
       }
+    } else {
+      bufferToExport = audioBuffer;
     }
 
     // Convert AudioBuffer to WAV
