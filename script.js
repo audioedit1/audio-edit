@@ -40,6 +40,7 @@ const waveSurfer = WaveSurfer.create({
 // =====================
 const fileInput = document.getElementById("fileInput");
 let originalFile = null;
+let objectUrl = null;
 
 fileInput.addEventListener("change", e => {
   const file = e.target.files[0];
@@ -47,13 +48,9 @@ fileInput.addEventListener("change", e => {
 
   originalFile = file;
 
-  if (waveSurfer._objectUrl) {
-    URL.revokeObjectURL(waveSurfer._objectUrl);
-  }
-
-  const url = URL.createObjectURL(file);
-  waveSurfer._objectUrl = url;
-  waveSurfer.load(url);
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  objectUrl = URL.createObjectURL(file);
+  waveSurfer.load(objectUrl);
 });
 
 // =====================
@@ -166,7 +163,7 @@ async function exportAudio() {
         const url = URL.createObjectURL(originalFile);
         const a = document.createElement("a");
         a.href = url;
-        a.download = originalFile.name || `exported-audio-${Date.now()}.${originalFile.name.split('.').pop() || 'wav'}`;
+        a.download = originalFile.name || `exported-audio-${Date.now()}.wav`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
