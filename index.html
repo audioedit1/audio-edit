@@ -12,7 +12,7 @@
 </head>
 <body>
 
-  <h1>Web DAW – Audio Editssssssssss Core</h1>
+  <h1>Web DAW – Audio Edit Core</h1>
 
   <!-- Transport -->
   <div class="controls">
@@ -55,6 +55,98 @@
 
   <!-- Waveform -->
   <div id="waveform"></div>
+
+  <!-- Sample Library (STATIC UI — no audio logic) -->
+  <section class="sample-library" aria-labelledby="sampleLibraryTitle">
+    <header class="sample-library__header">
+      <h2 id="sampleLibraryTitle">Sample Library</h2>
+      <p class="sample-library__subtitle">Static UI scaffold (no loading or playback)</p>
+    </header>
+
+    <div class="sample-library__toolbar" aria-label="Sample library toolbar">
+      <label class="sample-library__search">
+        Search
+        <input type="search" placeholder="Kick, snare, ambient…" aria-label="Search samples" />
+      </label>
+
+      <div class="sample-library__chips" aria-label="Tag filters (static)">
+        <button type="button" class="chip" aria-pressed="false">Drums</button>
+        <button type="button" class="chip" aria-pressed="false">Bass</button>
+        <button type="button" class="chip" aria-pressed="false">Ambient</button>
+        <button type="button" class="chip" aria-pressed="false">FX</button>
+      </div>
+    </div>
+
+    <div class="sample-grid" role="list" aria-label="Sample list">
+      <article class="sample-card" role="listitem" tabindex="0" aria-label="Lo‑fi Kick 01">
+        <div class="sample-card__top">
+          <h3 class="sample-card__name">Lo‑fi Kick 01</h3>
+          <span class="sample-card__duration" aria-label="Duration 0 minutes 1.2 seconds">0:01.2</span>
+        </div>
+        <div class="sample-card__tags" aria-label="Tags">
+          <span class="tag">Drums</span>
+          <span class="tag">One‑shot</span>
+          <span class="tag">Lo‑fi</span>
+        </div>
+        <div class="sample-card__meta">WAV • 44.1 kHz • Mono</div>
+        <div class="sample-card__actions" aria-label="Actions (not implemented)">
+          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
+          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
+        </div>
+      </article>
+
+      <article class="sample-card" role="listitem" tabindex="0" aria-label="Snare Tight 02">
+        <div class="sample-card__top">
+          <h3 class="sample-card__name">Snare Tight 02</h3>
+          <span class="sample-card__duration" aria-label="Duration 0 minutes 0.8 seconds">0:00.8</span>
+        </div>
+        <div class="sample-card__tags" aria-label="Tags">
+          <span class="tag">Drums</span>
+          <span class="tag">One‑shot</span>
+          <span class="tag">Clean</span>
+        </div>
+        <div class="sample-card__meta">WAV • 48 kHz • Mono</div>
+        <div class="sample-card__actions" aria-label="Actions (not implemented)">
+          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
+          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
+        </div>
+      </article>
+
+      <article class="sample-card" role="listitem" tabindex="0" aria-label="Ambient Pad A">
+        <div class="sample-card__top">
+          <h3 class="sample-card__name">Ambient Pad A</h3>
+          <span class="sample-card__duration" aria-label="Duration 0 minutes 12.0 seconds">0:12.0</span>
+        </div>
+        <div class="sample-card__tags" aria-label="Tags">
+          <span class="tag">Ambient</span>
+          <span class="tag">Loop</span>
+          <span class="tag">Warm</span>
+        </div>
+        <div class="sample-card__meta">WAV • 44.1 kHz • Stereo</div>
+        <div class="sample-card__actions" aria-label="Actions (not implemented)">
+          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
+          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
+        </div>
+      </article>
+
+      <article class="sample-card" role="listitem" tabindex="0" aria-label="FX Rise Short">
+        <div class="sample-card__top">
+          <h3 class="sample-card__name">FX Rise Short</h3>
+          <span class="sample-card__duration" aria-label="Duration 0 minutes 3.5 seconds">0:03.5</span>
+        </div>
+        <div class="sample-card__tags" aria-label="Tags">
+          <span class="tag">FX</span>
+          <span class="tag">Transition</span>
+          <span class="tag">Bright</span>
+        </div>
+        <div class="sample-card__meta">WAV • 48 kHz • Stereo</div>
+        <div class="sample-card__actions" aria-label="Actions (not implemented)">
+          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
+          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
+        </div>
+      </article>
+    </div>
+  </section>
 
 </body>
 </html>
