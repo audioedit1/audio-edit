@@ -29,6 +29,11 @@ button:hover {
   background: #2c84ff;
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 label {
   display: flex;
   gap: 6px;
@@ -51,4 +56,18 @@ input[type="range"] {
 
 #timeline {
   height: 30px;
+}
+
+#exportStatus {
+  min-width: 90px;
+  font-size: 0.95rem;
+  opacity: 0.85;
+}
+
+#exportStatus[data-state="success"] {
+  opacity: 1;
+}
+
+#exportStatus[data-state="error"] {
+  opacity: 1;
 }

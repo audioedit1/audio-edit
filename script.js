@@ -533,3 +533,84 @@ async function renderWithOfflineAudioContext(buffer) {
 }
 
 exportBtn.onclick = exportAudio;
+
+// =====================
+// EXPORT UX (WRAPPER ONLY — DO NOT TOUCH exportAudio)
+// =====================
+
+const exportStatusEl = document.getElementById("exportStatus");
+let isExporting = false;
+let exportStatusClearTimer = null;
+
+function setExportStatus(state, message) {
+  if (!exportStatusEl) return;
+
+  exportStatusEl.textContent = message || "";
+  exportStatusEl.dataset.state = state || "";
+
+  if (exportStatusClearTimer) {
+    clearTimeout(exportStatusClearTimer);
+    exportStatusClearTimer = null;
+  }
+}
+
+function scheduleClearStatus(delayMs) {
+  if (!exportStatusEl) return;
+  if (exportStatusClearTimer) clearTimeout(exportStatusClearTimer);
+
+  exportStatusClearTimer = setTimeout(() => {
+    setExportStatus("", "");
+  }, delayMs);
+}
+
+async function runExportWithUI() {
+  if (isExporting) return;
+  isExporting = true;
+
+  exportBtn.disabled = true;
+  setExportStatus("running", "Rendering...");
+
+  // exportAudio() uses alert() for some failure/info cases and catches its own errors.
+  // To provide clear UX without touching export logic, we observe alert messages.
+  const originalAlert = window.alert;
+  let sawAlert = false;
+  let lastAlertMessage = "";
+
+  window.alert = message => {
+    sawAlert = true;
+    lastAlertMessage = String(message ?? "");
+    originalAlert(message);
+  };
+
+  try {
+    await exportAudio();
+
+    if (sawAlert) {
+      const msg = lastAlertMessage;
+      const isFailure = /Failed to export audio/i.test(msg);
+      const isInfo = /Please load an audio file first\.|Audio data not available yet\./i.test(msg);
+
+      if (isFailure) {
+        setExportStatus("error", "Export failed");
+      } else if (isInfo) {
+        setExportStatus("info", "");
+      } else {
+        // Unknown alert text; treat as non-success but don’t invent details.
+        setExportStatus("info", "");
+      }
+    } else {
+      setExportStatus("success", "Exported");
+      scheduleClearStatus(4000);
+    }
+  } catch (err) {
+    console.error("Export wrapper error:", err);
+    setExportStatus("error", "Export failed");
+  } finally {
+    window.alert = originalAlert;
+    exportBtn.disabled = false;
+    isExporting = false;
+  }
+}
+
+// Override the earlier handler without modifying the EXPORT AUDIO section.
+exportBtn.onclick = runExportWithUI;
