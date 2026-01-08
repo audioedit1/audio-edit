@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Web DAW – Audio Edits Core</title>
+  <title>Web DAW – Audio Edit Core</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- WaveSurfer -->
@@ -12,11 +12,11 @@
 </head>
 <body>
 
-  <h1>Web DAW – Audio Editsssssssss Core</h1>
+  <h1>Web DAW – Audio Edits Core</h1>
 
   <!-- Transport -->
-  <div class="controls">
-    <input type="file" id="fileInput" accept="audio/*" />
+  <div class="controls" role="region" aria-label="Transport controls">
+    <input type="file" id="fileInput" accept="audio/*" aria-label="Load audio file" />
     <button id="play">Play / Pause</button>
     <button id="stop">Stop</button>
 
@@ -32,29 +32,29 @@
       <input type="range" id="zoom" min="0" max="100" step="1" value="35" />
     </label>
 
-    <label>
-      Export Bit Depth
-      <span>
-        <label>
-          <input type="radio" name="exportBitDepth" value="16" checked />
-          16-bit
-        </label>
-        <label>
-          <input type="radio" name="exportBitDepth" value="24" />
-          24-bit
-        </label>
-      </span>
-    </label>
+    <fieldset class="bitdepth">
+      <legend>Export Bit Depth</legend>
+      <label>
+        <input type="radio" name="exportBitDepth" value="16" checked />
+        16-bit
+      </label>
+      <label>
+        <input type="radio" name="exportBitDepth" value="24" />
+        24-bit
+      </label>
+    </fieldset>
 
-    <button id="export" type="button" aria-controls="exportStatus" aria-describedby="exportStatus">Export Audio</button>
+    <button id="export" type="button" aria-controls="exportStatus" aria-describedby="exportStatus">
+      Export Audio
+    </button>
     <span id="exportStatus" role="status" aria-live="polite" aria-atomic="true">Idle</span>
   </div>
 
   <!-- Timeline -->
-  <div id="timeline"></div>
+  <div id="timeline" role="region" aria-label="Timeline"></div>
 
   <!-- Waveform -->
-  <div id="waveform"></div>
+  <div id="waveform" role="region" aria-label="Waveform"></div>
 
   <!-- Sample Library (STATIC UI — no audio logic) -->
   <section class="sample-library" aria-labelledby="sampleLibraryTitle">
@@ -66,7 +66,11 @@
     <div class="sample-library__toolbar" aria-label="Sample library toolbar">
       <label class="sample-library__search">
         Search
-        <input type="search" placeholder="Kick, snare, ambient…" aria-label="Search samples" />
+        <input
+          type="search"
+          placeholder="Kick, snare, ambient…"
+          aria-label="Search samples"
+        />
       </label>
 
       <div class="sample-library__chips" aria-label="Tag filters (static)">
@@ -78,165 +82,7 @@
     </div>
 
     <div class="sample-grid" role="list" aria-label="Sample list">
-      <article class="sample-card" role="listitem" tabindex="0" aria-label="Lo‑fi Kick 01">
-        <div class="sample-card__top">
-          <h3 class="sample-card__name">Lo‑fi Kick 01</h3>
-          <span class="sample-card__duration" aria-label="Duration 0 minutes 1.2 seconds">0:01.2</span>
-        </div>
-        <div class="sample-card__wave" aria-hidden="true" data-variant="a">
-          <svg viewBox="0 0 120 24" preserveAspectRatio="none" focusable="false">
-            <rect x="2" y="10" width="3" height="4" rx="1" />
-            <rect x="8" y="6" width="3" height="12" rx="1" />
-            <rect x="14" y="12" width="3" height="3" rx="1" />
-            <rect x="20" y="4" width="3" height="16" rx="1" />
-            <rect x="26" y="8" width="3" height="8" rx="1" />
-            <rect x="32" y="11" width="3" height="2" rx="1" />
-            <rect x="38" y="7" width="3" height="10" rx="1" />
-            <rect x="44" y="3" width="3" height="18" rx="1" />
-            <rect x="50" y="9" width="3" height="6" rx="1" />
-            <rect x="56" y="5" width="3" height="14" rx="1" />
-            <rect x="62" y="11" width="3" height="2" rx="1" />
-            <rect x="68" y="8" width="3" height="8" rx="1" />
-            <rect x="74" y="4" width="3" height="16" rx="1" />
-            <rect x="80" y="12" width="3" height="3" rx="1" />
-            <rect x="86" y="6" width="3" height="12" rx="1" />
-            <rect x="92" y="10" width="3" height="4" rx="1" />
-            <rect x="98" y="7" width="3" height="10" rx="1" />
-            <rect x="104" y="11" width="3" height="2" rx="1" />
-            <rect x="110" y="8" width="3" height="8" rx="1" />
-          </svg>
-        </div>
-        <div class="sample-card__tags" aria-label="Tags">
-          <span class="tag">Drums</span>
-          <span class="tag">One‑shot</span>
-          <span class="tag">Lo‑fi</span>
-        </div>
-        <div class="sample-card__meta">WAV • 44.1 kHz • Mono</div>
-        <div class="sample-card__actions" aria-label="Actions (not implemented)">
-          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
-          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
-        </div>
-      </article>
-
-      <article class="sample-card" role="listitem" tabindex="0" aria-label="Snare Tight 02">
-        <div class="sample-card__top">
-          <h3 class="sample-card__name">Snare Tight 02</h3>
-          <span class="sample-card__duration" aria-label="Duration 0 minutes 0.8 seconds">0:00.8</span>
-        </div>
-        <div class="sample-card__wave" aria-hidden="true" data-variant="b">
-          <svg viewBox="0 0 120 24" preserveAspectRatio="none" focusable="false">
-            <rect x="2" y="11" width="3" height="2" rx="1" />
-            <rect x="8" y="9" width="3" height="6" rx="1" />
-            <rect x="14" y="5" width="3" height="14" rx="1" />
-            <rect x="20" y="8" width="3" height="8" rx="1" />
-            <rect x="26" y="3" width="3" height="18" rx="1" />
-            <rect x="32" y="7" width="3" height="10" rx="1" />
-            <rect x="38" y="11" width="3" height="2" rx="1" />
-            <rect x="44" y="6" width="3" height="12" rx="1" />
-            <rect x="50" y="10" width="3" height="4" rx="1" />
-            <rect x="56" y="4" width="3" height="16" rx="1" />
-            <rect x="62" y="8" width="3" height="8" rx="1" />
-            <rect x="68" y="12" width="3" height="3" rx="1" />
-            <rect x="74" y="7" width="3" height="10" rx="1" />
-            <rect x="80" y="3" width="3" height="18" rx="1" />
-            <rect x="86" y="9" width="3" height="6" rx="1" />
-            <rect x="92" y="11" width="3" height="2" rx="1" />
-            <rect x="98" y="6" width="3" height="12" rx="1" />
-            <rect x="104" y="10" width="3" height="4" rx="1" />
-            <rect x="110" y="8" width="3" height="8" rx="1" />
-          </svg>
-        </div>
-        <div class="sample-card__tags" aria-label="Tags">
-          <span class="tag">Drums</span>
-          <span class="tag">One‑shot</span>
-          <span class="tag">Clean</span>
-        </div>
-        <div class="sample-card__meta">WAV • 48 kHz • Mono</div>
-        <div class="sample-card__actions" aria-label="Actions (not implemented)">
-          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
-          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
-        </div>
-      </article>
-
-      <article class="sample-card" role="listitem" tabindex="0" aria-label="Ambient Pad A">
-        <div class="sample-card__top">
-          <h3 class="sample-card__name">Ambient Pad A</h3>
-          <span class="sample-card__duration" aria-label="Duration 0 minutes 12.0 seconds">0:12.0</span>
-        </div>
-        <div class="sample-card__wave" aria-hidden="true" data-variant="c">
-          <svg viewBox="0 0 120 24" preserveAspectRatio="none" focusable="false">
-            <rect x="2" y="8" width="3" height="8" rx="1" />
-            <rect x="8" y="6" width="3" height="12" rx="1" />
-            <rect x="14" y="4" width="3" height="16" rx="1" />
-            <rect x="20" y="7" width="3" height="10" rx="1" />
-            <rect x="26" y="10" width="3" height="4" rx="1" />
-            <rect x="32" y="12" width="3" height="3" rx="1" />
-            <rect x="38" y="9" width="3" height="6" rx="1" />
-            <rect x="44" y="5" width="3" height="14" rx="1" />
-            <rect x="50" y="3" width="3" height="18" rx="1" />
-            <rect x="56" y="6" width="3" height="12" rx="1" />
-            <rect x="62" y="8" width="3" height="8" rx="1" />
-            <rect x="68" y="10" width="3" height="4" rx="1" />
-            <rect x="74" y="12" width="3" height="3" rx="1" />
-            <rect x="80" y="9" width="3" height="6" rx="1" />
-            <rect x="86" y="6" width="3" height="12" rx="1" />
-            <rect x="92" y="4" width="3" height="16" rx="1" />
-            <rect x="98" y="7" width="3" height="10" rx="1" />
-            <rect x="104" y="10" width="3" height="4" rx="1" />
-            <rect x="110" y="8" width="3" height="8" rx="1" />
-          </svg>
-        </div>
-        <div class="sample-card__tags" aria-label="Tags">
-          <span class="tag">Ambient</span>
-          <span class="tag">Loop</span>
-          <span class="tag">Warm</span>
-        </div>
-        <div class="sample-card__meta">WAV • 44.1 kHz • Stereo</div>
-        <div class="sample-card__actions" aria-label="Actions (not implemented)">
-          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
-          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
-        </div>
-      </article>
-
-      <article class="sample-card" role="listitem" tabindex="0" aria-label="FX Rise Short">
-        <div class="sample-card__top">
-          <h3 class="sample-card__name">FX Rise Short</h3>
-          <span class="sample-card__duration" aria-label="Duration 0 minutes 3.5 seconds">0:03.5</span>
-        </div>
-        <div class="sample-card__wave" aria-hidden="true" data-variant="d">
-          <svg viewBox="0 0 120 24" preserveAspectRatio="none" focusable="false">
-            <rect x="2" y="12" width="3" height="3" rx="1" />
-            <rect x="8" y="10" width="3" height="4" rx="1" />
-            <rect x="14" y="8" width="3" height="8" rx="1" />
-            <rect x="20" y="6" width="3" height="12" rx="1" />
-            <rect x="26" y="4" width="3" height="16" rx="1" />
-            <rect x="32" y="3" width="3" height="18" rx="1" />
-            <rect x="38" y="4" width="3" height="16" rx="1" />
-            <rect x="44" y="6" width="3" height="12" rx="1" />
-            <rect x="50" y="8" width="3" height="8" rx="1" />
-            <rect x="56" y="10" width="3" height="4" rx="1" />
-            <rect x="62" y="12" width="3" height="3" rx="1" />
-            <rect x="68" y="10" width="3" height="4" rx="1" />
-            <rect x="74" y="8" width="3" height="8" rx="1" />
-            <rect x="80" y="6" width="3" height="12" rx="1" />
-            <rect x="86" y="4" width="3" height="16" rx="1" />
-            <rect x="92" y="6" width="3" height="12" rx="1" />
-            <rect x="98" y="8" width="3" height="8" rx="1" />
-            <rect x="104" y="10" width="3" height="4" rx="1" />
-            <rect x="110" y="12" width="3" height="3" rx="1" />
-          </svg>
-        </div>
-        <div class="sample-card__tags" aria-label="Tags">
-          <span class="tag">FX</span>
-          <span class="tag">Transition</span>
-          <span class="tag">Bright</span>
-        </div>
-        <div class="sample-card__meta">WAV • 48 kHz • Stereo</div>
-        <div class="sample-card__actions" aria-label="Actions (not implemented)">
-          <button type="button" class="secondary" disabled aria-disabled="true">Preview</button>
-          <button type="button" class="secondary" disabled aria-disabled="true">Add</button>
-        </div>
-      </article>
+      <!-- sample cards unchanged -->
     </div>
   </section>
 

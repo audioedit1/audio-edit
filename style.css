@@ -17,6 +17,20 @@ h1 {
   margin-bottom: 10px;
 }
 
+.bitdepth {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.bitdepth legend {
+  padding: 0;
+  margin: 0;
+}
+
 button {
   background: #1e6fd9;
   color: white;
@@ -53,6 +67,12 @@ label {
 
 input[type="range"] {
   width: 120px;
+}
+
+input[type="file"]:focus-visible,
+.sample-library__search input[type="search"]:focus-visible {
+  outline: 2px solid #2c84ff;
+  outline-offset: 2px;
 }
 
 #waveform {
@@ -202,6 +222,11 @@ input[type="range"] {
 
 .chip:hover {
   background: #111;
+}
+
+.chip:focus-visible {
+  outline: 2px solid #2c84ff;
+  outline-offset: 2px;
 }
 
 .sample-grid {
