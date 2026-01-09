@@ -65,6 +65,12 @@ label {
   align-items: center;
 }
 
+.hint {
+  opacity: 0.75;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 input[type="range"] {
   width: 120px;
 }
@@ -454,6 +460,10 @@ button.secondary:hover {
   border: 1px solid #2c84ff;
 }
 
+#loopToggle {
+  min-width: 120px;
+}
+
 #play[aria-pressed="true"] {
   background: #111;
   border: 1px solid #2c84ff;
@@ -494,4 +504,6 @@ button[aria-disabled="true"] {
   font-size: 0.9rem;
   line-height: 1.4;
   white-space: nowrap;
+  min-width: 92px;
+  justify-content: center;
 }

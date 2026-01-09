@@ -290,10 +290,9 @@ let loopEnabled = false;
 function syncTransportStatusLine() {
   const playing = Boolean(waveSurfer.isPlaying?.());
   const base = playing ? "Playing" : "Stopped";
-  const loopText = loopEnabled ? "Loop armed" : "Loop off";
 
   if (transportStatusEl) {
-    transportStatusEl.textContent = `${base} • ${loopText}`;
+    transportStatusEl.textContent = base;
   }
 
   if (playBtn) {
@@ -311,11 +310,6 @@ function syncLoopToggleLabel() {
   if (!loopToggleBtn) return;
   loopToggleBtn.textContent = loopEnabled ? "Loop: On (L)" : "Loop: Off (L)";
   loopToggleBtn.setAttribute("aria-pressed", loopEnabled ? "true" : "false");
-
-  if (loopStatusEl) {
-    loopStatusEl.textContent = loopEnabled ? "Loop armed" : "Loop off";
-    loopStatusEl.dataset.state = loopEnabled ? "armed" : "off";
-  }
 
   syncTransportStatusLine();
 }
