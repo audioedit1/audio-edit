@@ -112,19 +112,99 @@ const fileInput = document.getElementById("fileInput");
 let originalFile = null;
 let objectUrl = null;
 
-fileInput.addEventListener("change", e => {
-  const file = e.target.files[0];
-  if (!file) return;
+// =====================
+// SESSION SWITCHING (FRONTEND-ONLY, SINGLE-BUFFER)
+// =====================
+// Contract notes:
+// - In-memory only (page lifetime)
+// - Always one active buffer in WaveSurfer
+// - Switching stops transport and clears regions
+const sessionListEl = document.getElementById("sessionList");
+const sessionEntries = [];
+let activeSessionId = null;
+let nextSessionId = 1;
 
-  originalFile = file;
+function clearAllRegionsForSwitch() {
+  try {
+    Object.values(regions.getRegions?.() || {}).forEach(r => r.remove());
+  } catch {
+    // Best-effort only; regions must not carry over.
+  }
+}
+
+function stopTransportForSwitch() {
+  // Match Stop button semantics so region-out doesn't restart.
+  userStopRequested = true;
+  waveSurfer.stop();
+  queueMicrotask(() => {
+    userStopRequested = false;
+  });
+  syncTransportStatusLine();
+}
+
+function renderSessionList() {
+  if (!sessionListEl) return;
+
+  sessionListEl.textContent = "";
+
+  if (!sessionEntries.length) {
+    const li = document.createElement("li");
+    li.className = "session__empty";
+    li.textContent = "No files loaded yet.";
+    sessionListEl.appendChild(li);
+    return;
+  }
+
+  for (const entry of sessionEntries) {
+    const li = document.createElement("li");
+    li.className = "session__item";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "session__button";
+    btn.textContent = entry.name;
+    btn.dataset.sessionId = String(entry.id);
+
+    const isActive = entry.id === activeSessionId;
+    btn.setAttribute("aria-current", isActive ? "true" : "false");
+
+    btn.addEventListener("click", () => {
+      if (entry.id === activeSessionId) return;
+      loadSessionEntry(entry);
+    });
+
+    li.appendChild(btn);
+    sessionListEl.appendChild(li);
+  }
+}
+
+function rememberFileInSession(file) {
+  const entry = {
+    id: nextSessionId++,
+    name: file?.name || `Untitled-${Date.now()}`,
+    file,
+    url: URL.createObjectURL(file)
+  };
+  sessionEntries.push(entry);
+  return entry;
+}
+
+function loadSessionEntry(entry) {
+  if (!entry?.file || !entry?.url) return;
+
+  // Reset phase-1 state: no carry-over.
+  stopTransportForSwitch();
+  clearAllRegionsForSwitch();
+
+  originalFile = entry.file;
   sourceDecodedBuffer = null;
 
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  objectUrl = URL.createObjectURL(file);
-  waveSurfer.load(objectUrl);
+  // Keep a pointer for any legacy code paths; do NOT revoke here
+  // because entries must remain switchable for the page lifetime.
+  objectUrl = entry.url;
+  waveSurfer.load(entry.url);
 
-  // Option B: decode the original upload ourselves for highest-fidelity export
-  decodeOriginalFileToBuffer(file)
+  decodeOriginalFileToBuffer(entry.file)
     .then(buffer => {
       sourceDecodedBuffer = buffer;
     })
@@ -132,6 +212,30 @@ fileInput.addEventListener("change", e => {
       console.error("Original decode error:", err);
       sourceDecodedBuffer = null;
     });
+
+  activeSessionId = entry.id;
+  renderSessionList();
+}
+
+window.addEventListener("beforeunload", () => {
+  // Best-effort cleanup.
+  for (const entry of sessionEntries) {
+    try {
+      if (entry?.url) URL.revokeObjectURL(entry.url);
+    } catch {
+      // ignore
+    }
+  }
+});
+
+fileInput.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const entry = rememberFileInSession(file);
+  activeSessionId = entry.id;
+  renderSessionList();
+  loadSessionEntry(entry);
 });
 
 // =====================

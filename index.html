@@ -14,7 +14,7 @@
 </head>
 <body>
 
-  <h1>Web DAW – Audio Editss Core</h1>
+  <h1>Web DAW – Audio Editssssss Core</h1>
 
   <!-- Transport -->
   <div class="controls" role="region" aria-label="Transport controls">
@@ -60,6 +60,15 @@
 
   <!-- Waveform -->
   <div id="waveform" role="region" aria-label="Waveform"></div>
+
+  <!-- Session (frontend-only, single-buffer switching) -->
+  <section class="session" aria-labelledby="sessionTitle">
+    <header class="session__header">
+      <h2 id="sessionTitle">Session</h2>
+      <p class="session__subtitle">In-memory list of loaded files (single-buffer editor)</p>
+    </header>
+    <ul id="sessionList" class="session__list" aria-label="Loaded files"></ul>
+  </section>
 
   <!-- Sample Library (STATIC UI — no audio logic) -->
   <section class="sample-library" aria-labelledby="sampleLibraryTitle">
