@@ -231,8 +231,8 @@ input[type="file"]:focus-visible,
 
 .sample-grid {
   margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
@@ -241,6 +241,12 @@ input[type="file"]:focus-visible,
   border: 1px solid #2c84ff;
   border-radius: 12px;
   padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: center;
 }
 
 .sample-card:focus-visible {
@@ -253,6 +259,7 @@ input[type="file"]:focus-visible,
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  grid-column: 1;
 }
 
 .sample-card__name {
@@ -298,6 +305,8 @@ input[type="file"]:focus-visible,
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  grid-column: 1;
+  margin-top: 0;
 }
 
 .tag {
@@ -314,13 +323,30 @@ input[type="file"]:focus-visible,
   margin-top: 10px;
   opacity: 0.75;
   font-size: 0.9rem;
+  grid-column: 1;
+  margin-top: 0;
 }
 
 .sample-card__actions {
-  margin-top: 12px;
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+}
+
+@media (max-width: 520px) {
+  .sample-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .sample-card__actions {
+    grid-column: 1;
+    grid-row: 4;
+    justify-content: flex-start;
+  }
 }
 
 button.secondary {
