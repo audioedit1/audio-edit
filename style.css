@@ -122,11 +122,14 @@ input[type="file"]:focus-visible,
 
 .session__list {
   margin: 12px 0 0;
-  padding: 0;
+  padding: 10px;
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: #0e0e0e;
+  border: 1px solid #2c84ff;
+  border-radius: 12px;
 }
 
 .session__item {
@@ -136,21 +139,41 @@ input[type="file"]:focus-visible,
 .session__button {
   width: 100%;
   text-align: left;
-  background: #0e0e0e;
-  border: 1px solid #2c84ff;
+  background: #111;
+  border: 2px solid #2c84ff;
   color: #ffffff;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.session__button:hover {
+  background: #0e0e0e;
+}
+
+.session__button:focus-visible {
+  outline: 2px solid #2c84ff;
+  outline-offset: 2px;
 }
 
 .session__button[aria-current="true"] {
-  background: #111;
-  border: 1px solid #ffffff;
+  background: #1e6fd9;
+  border-color: #1e6fd9;
+  font-weight: 800;
+}
+
+.session__button[aria-current="true"]::before {
+  content: "●";
+  display: inline-block;
+  margin-right: 10px;
+  line-height: 1;
+  color: #ffffff;
 }
 
 .session__empty {
   opacity: 0.75;
-  padding: 6px 2px;
+  padding: 10px 8px;
 }
 
 #exportStatus {
