@@ -331,3 +331,54 @@ button.secondary {
 button.secondary:hover {
   background: #0e0e0e;
 }
+
+/* =====================
+   TRANSPORT: LOOP UI (READ-ONLY STATE)
+   ===================== */
+
+#loopToggle[aria-pressed="true"] {
+  background: #111;
+  border: 1px solid #2c84ff;
+}
+
+#play[aria-pressed="true"] {
+  background: #111;
+  border: 1px solid #2c84ff;
+}
+
+button[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.loop-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #ffffff;
+  opacity: 0.75;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.loop-status[data-state="armed"] {
+  opacity: 1;
+  color: #2c84ff;
+  border-color: #2c84ff;
+}
+
+.transport-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #ffffff;
+  opacity: 0.75;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}

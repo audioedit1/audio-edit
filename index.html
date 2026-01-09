@@ -13,13 +13,16 @@
 </head>
 <body>
 
-  <h1>Web DAW – Audio Editssss Core</h1>
+  <h1>Web DAW – Audio Editssssssssss Core</h1>
 
   <!-- Transport -->
   <div class="controls" role="region" aria-label="Transport controls">
     <input type="file" id="fileInput" accept="audio/*" aria-label="Load audio file" />
-    <button id="play">Play / Pause</button>
+    <button id="play" aria-pressed="false">Play / Pause</button>
     <button id="stop">Stop</button>
+    <button id="loopToggle" aria-pressed="false">Loop: Off (L)</button>
+    <span id="loopStatus" class="loop-status" role="status" aria-live="polite" aria-atomic="true">Loop off</span>
+    <span id="transportStatus" class="transport-status" role="status" aria-live="polite" aria-atomic="true">Stopped</span>
 
     <label>
       Volume

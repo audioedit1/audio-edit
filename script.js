@@ -137,17 +137,171 @@ fileInput.addEventListener("change", e => {
 // =====================
 // TRANSPORT
 // =====================
-document.getElementById("play").onclick = () => waveSurfer.playPause();
+const playBtn = document.getElementById("play");
+const stopBtn = document.getElementById("stop");
+
+if (playBtn) playBtn.onclick = () => waveSurfer.playPause();
+
+const loopToggleBtn = document.getElementById("loopToggle");
+const loopStatusEl = document.getElementById("loopStatus");
+const transportStatusEl = document.getElementById("transportStatus");
+
+const volumeSliderEl = document.getElementById("volume");
+const zoomSliderEl = document.getElementById("zoom");
+
+const SESSION_KEYS = {
+  loopEnabled: "transport.loopEnabled",
+  volume: "transport.volume",
+  zoom: "transport.zoom"
+};
+
+function setAriaDisabled(el, isDisabled) {
+  if (!el) return;
+  el.setAttribute("aria-disabled", isDisabled ? "true" : "false");
+}
+
+function readSessionString(key) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionString(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore (privacy mode, storage disabled, etc.)
+  }
+}
+
+function hasLoadedAudio() {
+  const d = Number(waveSurfer.getDuration?.() || 0);
+  return Number.isFinite(d) && d > 0;
+}
+
+let loopEnabled = false;
+
+function syncTransportStatusLine() {
+  const playing = Boolean(waveSurfer.isPlaying?.());
+  const base = playing ? "Playing" : "Stopped";
+  const loopText = loopEnabled ? "Loop armed" : "Loop off";
+
+  if (transportStatusEl) {
+    transportStatusEl.textContent = `${base} • ${loopText}`;
+  }
+
+  if (playBtn) {
+    playBtn.setAttribute("aria-pressed", playing ? "true" : "false");
+  }
+
+  // UI-only dimming for actions that are meaningless without loaded audio.
+  const canUseTransport = hasLoadedAudio();
+  setAriaDisabled(playBtn, !canUseTransport);
+  setAriaDisabled(stopBtn, !canUseTransport);
+  setAriaDisabled(loopToggleBtn, !canUseTransport);
+}
+
+function syncLoopToggleLabel() {
+  if (!loopToggleBtn) return;
+  loopToggleBtn.textContent = loopEnabled ? "Loop: On (L)" : "Loop: Off (L)";
+  loopToggleBtn.setAttribute("aria-pressed", loopEnabled ? "true" : "false");
+
+  if (loopStatusEl) {
+    loopStatusEl.textContent = loopEnabled ? "Loop armed" : "Loop off";
+    loopStatusEl.dataset.state = loopEnabled ? "armed" : "off";
+  }
+
+  syncTransportStatusLine();
+}
+
+syncLoopToggleLabel();
+
+if (loopToggleBtn) {
+  loopToggleBtn.onclick = () => {
+    loopEnabled = !loopEnabled;
+    writeSessionString(SESSION_KEYS.loopEnabled, loopEnabled ? "1" : "0");
+    syncLoopToggleLabel();
+  };
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "l" && e.key !== "L") return;
+
+  const target = e.target;
+  const active = document.activeElement;
+
+  const targetIsEditable =
+    (target instanceof HTMLElement &&
+      (target.closest("input") || target.closest("textarea") || target.isContentEditable)) ||
+    (active instanceof HTMLElement &&
+      ((active.tagName === "INPUT") || (active.tagName === "TEXTAREA") || active.isContentEditable));
+
+  if (targetIsEditable) return;
+
+  loopToggleBtn?.click();
+});
 
 let userStopRequested = false;
-document.getElementById("stop").onclick = () => {
-  // Prevent region looping logic from immediately restarting playback
-  userStopRequested = true;
-  waveSurfer.stop();
-  queueMicrotask(() => {
-    userStopRequested = false;
+if (stopBtn) {
+  stopBtn.onclick = () => {
+    // Prevent region looping logic from immediately restarting playback
+    userStopRequested = true;
+    waveSurfer.stop();
+    queueMicrotask(() => {
+      userStopRequested = false;
+    });
+    syncTransportStatusLine();
+  };
+}
+
+// Keep Transport UI reflecting existing playback state.
+waveSurfer.on("play", syncTransportStatusLine);
+waveSurfer.on("pause", syncTransportStatusLine);
+waveSurfer.on("finish", syncTransportStatusLine);
+waveSurfer.on("ready", syncTransportStatusLine);
+
+// Session-only preferences (no new behavior): store UI control values.
+if (volumeSliderEl) {
+  volumeSliderEl.addEventListener("input", () => {
+    writeSessionString(SESSION_KEYS.volume, String(volumeSliderEl.value));
   });
-};
+}
+
+if (zoomSliderEl) {
+  zoomSliderEl.addEventListener("input", () => {
+    writeSessionString(SESSION_KEYS.zoom, String(zoomSliderEl.value));
+  });
+}
+
+// Deterministic restore within the same tab session.
+queueMicrotask(() => {
+  const loopStored = readSessionString(SESSION_KEYS.loopEnabled);
+  if (loopStored === "0" || loopStored === "1") {
+    loopEnabled = loopStored === "1";
+  }
+
+  const volumeStored = readSessionString(SESSION_KEYS.volume);
+  if (volumeSliderEl && volumeStored != null) {
+    const v = Number(volumeStored);
+    if (Number.isFinite(v)) {
+      volumeSliderEl.value = String(v);
+      volumeSliderEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  const zoomStored = readSessionString(SESSION_KEYS.zoom);
+  if (zoomSliderEl && zoomStored != null) {
+    const z = Number(zoomStored);
+    if (Number.isFinite(z)) {
+      zoomSliderEl.value = String(z);
+      zoomSliderEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+
+  syncLoopToggleLabel();
+});
 
 // =====================
 // VOLUME / MUTE (PREVIEW LEVEL)
@@ -226,6 +380,7 @@ regions.on("region-out", region => {
   // Guard against that so Stop always stops.
   if (userStopRequested) return;
   if (!waveSurfer.isPlaying?.()) return;
+  if (!loopEnabled) return;
   if (region.loop) region.play();
 });
 
