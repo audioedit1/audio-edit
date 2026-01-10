@@ -14,151 +14,111 @@
 </head>
 <body>
 
-  <header class="appbar" role="banner" aria-label="Application">
-    <h1 class="appbar__title">Audio Edit</h1>
-  </header>
+  <h1>Web DAW – Audio Editss Core</h1>
 
-  <!--
-    UI Modes (visual only)
-    - Default: Library Mode (full-page sample browsing)
-    - Editor Mode: Add `data-mode="editor"` to <body> (no JS)
-  -->
+  <!-- Transport -->
+  <div class="controls" role="region" aria-label="Transport controls">
+    <input type="file" id="fileInput" accept="audio/*" aria-label="Load audio file" />
+    <button id="play" aria-pressed="false">Play / Pause</button>
+    <button id="stop">Stop</button>
+    <button id="loopToggle" aria-pressed="false">Loop: Off (L)</button>
+    <span id="loopStatus" class="loop-status" role="status" aria-live="polite" aria-atomic="true">Loop off</span>
+    <span id="transportStatus" class="transport-status" role="status" aria-live="polite" aria-atomic="true">Stopped</span>
 
-  <div class="library-screen" aria-label="Library mode">
-    <section class="sample-library sample-library--full" aria-labelledby="sampleLibraryTitle">
-      <header class="sample-library__header">
-        <h2 id="sampleLibraryTitle">Sample Library</h2>
-        <p class="sample-library__subtitle">Browse & audition</p>
-      </header>
+    <label>
+      Volume
+      <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
+    </label>
 
-      <div class="sample-library__toolbar" aria-label="Sample library toolbar">
-        <label class="sample-library__search">
-          Search
-          <input
-            type="search"
-            placeholder="Kick, snare, ambient…"
-            aria-label="Search samples"
-          />
-        </label>
+    <button id="mute">Mute</button>
 
-        <div class="sample-library__chips" aria-label="Category filters">
-          <button type="button" class="chip" aria-pressed="false">Drums</button>
-          <button type="button" class="chip" aria-pressed="false">Bass</button>
-          <button type="button" class="chip" aria-pressed="false">Ambient</button>
-          <button type="button" class="chip" aria-pressed="false">FX</button>
-        </div>
-      </div>
+    <label>
+      Zoom
+      <input type="range" id="zoom" min="0" max="100" step="1" value="35" />
+    </label>
 
-      <div class="sample-grid" role="list" aria-label="Sample list">
-        <!-- sample cards rendered by sample-library.js -->
-      </div>
-    </section>
+    <fieldset class="bitdepth">
+      <legend>Export Bit Depth</legend>
+      <label>
+        <input type="radio" name="exportBitDepth" value="16" checked />
+        16-bit
+      </label>
+      <label>
+        <input type="radio" name="exportBitDepth" value="24" />
+        24-bit
+      </label>
+    </fieldset>
+
+    <button id="export" type="button" aria-controls="exportStatus" aria-describedby="exportStatus">
+      Export Audio
+    </button>
+    <span id="exportStatus" role="status" aria-live="polite" aria-atomic="true">Idle</span>
   </div>
 
-  <!-- Editor layer (secondary). Hidden by default via CSS-only. -->
-  <div class="editor-layer" aria-label="Editor mode">
-    <button type="button" class="editor-handle" aria-label="Editor workspace handle (click/drag to collapse)" title="Editor workspace (visual-only handle)">
-      <span class="editor-handle__bar" aria-hidden="true"></span>
-      <span class="editor-handle__label">Editor Workspace</span>
-      <span class="editor-handle__chevron" aria-hidden="true"></span>
-    </button>
+  <!-- Timeline -->
+  <div id="timeline" role="region" aria-label="Timeline"></div>
 
-    <div class="editor-panel" aria-label="Editor panel">
-      <section class="panel panel--transport" aria-label="Editor header / transport">
-        <div class="controls" role="region" aria-label="Transport controls">
-          <div class="control-group" aria-label="Transport">
-            <span class="control-group__title">Transport</span>
-            <input type="file" id="fileInput" accept="audio/*" aria-label="Load audio file" />
-            <button id="play" aria-pressed="false">Play / Pause</button>
-            <button id="stop">Stop</button>
-            <span id="transportStatus" class="transport-status" role="status" aria-live="polite" aria-atomic="true">Stopped</span>
+  <!-- Waveform -->
+  <div id="waveform" role="region" aria-label="Waveform"></div>
 
-            <label>
-              Zoom
-              <input type="range" id="zoom" min="0" max="100" step="1" value="35" />
-            </label>
-          </div>
+  <!-- Editor (PHASE-1: UI + STATE ONLY) -->
+  <section class="editor" aria-labelledby="editorTitle">
+    <header class="editor__header">
+      <h2 id="editorTitle">Editor</h2>
+      <p class="editor__subtitle">Phase-1: Library → Bin → Inspector (metadata only)</p>
+    </header>
 
-          <div class="control-group" aria-label="Monitoring">
-            <span class="control-group__title">Monitoring</span>
-            <button id="loopToggle" aria-pressed="false">Loop: Off (L)</button>
+    <div class="editor__slab" role="region" aria-label="Editor panels">
+      <aside class="editor-bin" aria-label="Editor Bin">
+        <h3 class="editor-bin__title">Bin</h3>
+        <ul id="editorBinList" class="editor-bin__list" aria-label="Added samples"></ul>
+      </aside>
 
-            <label>
-              Preview Gain <span class="hint">(no effect on export)</span>
-              <input type="range" id="volume" min="0" max="1" step="0.01" value="1" />
-            </label>
+      <aside class="editor-inspector" aria-label="Inspector">
+        <h3 class="editor-inspector__title">Inspector</h3>
+        <div id="editorInspector" class="editor-inspector__panel" role="region" aria-label="Selection inspector"></div>
+      </aside>
+    </div>
+  </section>
 
-            <button id="mute">Mute</button>
-          </div>
+  <!-- Session (frontend-only, single-buffer switching) -->
+  <section class="session" aria-labelledby="sessionTitle">
+    <header class="session__header">
+      <h2 id="sessionTitle">Session</h2>
+      <p class="session__subtitle">In-memory list of loaded files (single-buffer editor)</p>
+    </header>
+    <ul id="sessionList" class="session__list" aria-label="Loaded files"></ul>
+  </section>
 
-          <div class="control-group control-group--export" aria-label="Export">
-            <span class="control-group__title">Export</span>
-            <fieldset class="bitdepth">
-              <legend>Bit Depth</legend>
-              <label>
-                <input type="radio" name="exportBitDepth" value="16" checked />
-                16-bit
-              </label>
-              <label>
-                <input type="radio" name="exportBitDepth" value="24" />
-                24-bit
-              </label>
-            </fieldset>
+  <!-- Sample Library (STATIC UI — no audio logic) -->
+  <section class="sample-library" aria-labelledby="sampleLibraryTitle">
+    <header class="sample-library__header">
+      <h2 id="sampleLibraryTitle">Sample Library</h2>
+      <p class="sample-library__subtitle">Phase-1: Preview + ADD to Editor (metadata only)</p>
+    </header>
 
-            <button id="export" type="button" aria-controls="exportStatus" aria-describedby="exportStatus">
-              Export
-            </button>
-            <span id="exportStatus" role="status" aria-live="polite" aria-atomic="true">Idle</span>
-          </div>
-        </div>
-      </section>
+    <div class="sample-library__toolbar" aria-label="Sample library toolbar">
+      <label class="sample-library__search">
+        Search
+        <input
+          type="search"
+          placeholder="Kick, snare, ambient…"
+          aria-label="Search samples"
+        />
+      </label>
 
-      <div class="editor-grid" aria-label="Editor workspace">
-        <aside class="workbin" aria-label="Working library">
-          <section class="session session--workbin" aria-labelledby="sessionTitle">
-            <header class="session__header">
-              <h2 id="sessionTitle">Bin</h2>
-              <p class="session__subtitle">Selected sounds</p>
-            </header>
-            <ul id="sessionList" class="session__list" aria-label="Working bin"></ul>
-          </section>
-        </aside>
-
-        <main class="editor-center" aria-label="Timeline and waveform">
-          <div id="timeline" role="region" aria-label="Timeline"></div>
-          <div id="waveform" role="region" aria-label="Waveform"></div>
-        </main>
-
-        <aside class="inspector inspector--editor" aria-labelledby="inspectorTitle" data-state="inactive">
-          <header class="inspector__header">
-            <h2 id="inspectorTitle">Inspector</h2>
-            <p class="inspector__subtitle">Analysis (inactive)</p>
-          </header>
-
-          <div class="inspector__body" aria-label="Inspector content">
-            <dl class="kv" aria-label="Sample metadata">
-              <div class="kv__row"><dt>Rate</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>Channels</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>Duration</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>Loudness</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>License</dt><dd>—</dd></div>
-            </dl>
-
-            <div class="inspector__divider" role="separator" aria-hidden="true"></div>
-
-            <div class="inspector__placeholder" aria-label="Analysis placeholders">
-              <p class="inspector__placeholder-title">Analysis</p>
-              <ul class="inspector__placeholder-list" aria-label="Coming later">
-                <li>Peak / RMS (coming later)</li>
-                <li>LUFS (coming later)</li>
-                <li>True Peak (coming later)</li>
-              </ul>
-            </div>
-          </div>
-        </aside>
+      <div class="sample-library__chips" aria-label="Tag filters (static)">
+        <button type="button" class="chip" aria-pressed="false">Drums</button>
+        <button type="button" class="chip" aria-pressed="false">Bass</button>
+        <button type="button" class="chip" aria-pressed="false">Ambient</button>
+        <button type="button" class="chip" aria-pressed="false">FX</button>
       </div>
     </div>
-  </div>
+
+    <div class="sample-grid" role="list" aria-label="Sample list">
+      <!-- sample cards unchanged -->
+    </div>
+  </section>
 
 </body>
 </html>

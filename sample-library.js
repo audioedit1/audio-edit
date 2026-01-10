@@ -1,5 +1,10 @@
 const DATA_URL = "data/samples.mock.json";
 
+// Phase-1 Library → Editor wiring (UI + state only)
+// Contract: no audio decoding, no WaveSurfer calls, no preview changes.
+const LIBRARY_ADD_EVENT = "library:add-to-editor";
+const EDITOR_BIN_CHANGED_EVENT = "editor:bin-changed";
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -79,11 +84,18 @@ function renderSamples(gridEl, samples) {
     card.setAttribute("role", "listitem");
     card.setAttribute("data-preview-src", sample.previewUrl);
 
+    // Metadata-only identity for Phase-1 editor bin.
+    card.setAttribute("data-sample-id", sample.id);
+
     const tagsHtml = sample.tags
       .map(t => `<span class="tag">${escapeHtml(t)}</span>`)
       .join("");
 
     const metaText = `Uploader: ${sample.uploader} • License: ${sample.license} • Duration: ${formatDuration(sample.durationSec)} • ${sample.sampleRate} Hz • ${sample.channels} ch`;
+
+    const isAdded = addedSampleIds.has(sample.id);
+    const addLabel = isAdded ? "Added" : "Add";
+    const addDisabledAttr = isAdded ? "disabled aria-disabled=\"true\"" : "aria-disabled=\"false\"";
 
     card.innerHTML = `
       <div class="sample-card__top">
@@ -105,6 +117,13 @@ function renderSamples(gridEl, samples) {
       <div class="sample-card__actions">
         <button type="button" data-preview-play>Play</button>
         <button type="button" class="secondary" data-preview-stop>Stop</button>
+        <button
+          type="button"
+          class="add-btn"
+          data-editor-add
+          data-sample-id="${escapeHtml(sample.id)}"
+          ${addDisabledAttr}
+        >${addLabel}</button>
       </div>
     `;
 
@@ -189,17 +208,95 @@ async function loadSamples() {
 // Top-level await ensures the sample cards exist before `sample-preview.js` boots.
 const samples = await loadSamples();
 
+// Fast lookup for ADD wiring.
+const sampleById = new Map(samples.map(s => [s.id, s]));
+
+// Local UI state: which samples are already in the editor bin.
+// (Editor is the source of truth; we also update this on click.)
+const addedSampleIds = new Set();
+
 const dom = getDom();
 
 if (!dom.grid) {
   // Sample Library not present; nothing to do.
 } else {
+  function setAddButtonState(btn, isAdded) {
+    if (!btn) return;
+    btn.disabled = Boolean(isAdded);
+    btn.setAttribute("aria-disabled", isAdded ? "true" : "false");
+    btn.textContent = isAdded ? "Added" : "Add";
+  }
+
+  function applyAddedStateToGrid() {
+    if (!dom.grid) return;
+    const buttons = Array.from(dom.grid.querySelectorAll("button[data-editor-add][data-sample-id]"));
+    for (const btn of buttons) {
+      const id = btn.getAttribute("data-sample-id") || "";
+      setAddButtonState(btn, addedSampleIds.has(id));
+    }
+  }
+
   function update() {
     const selectedCategories = readSelectedCategories(dom.chipEls);
     const searchText = dom.searchInput?.value ?? "";
     const filtered = filterSamplesInOrder(samples, searchText, selectedCategories);
     renderSamples(dom.grid, filtered);
+
+    // Preserve "Added" indicator across filter re-renders.
+    applyAddedStateToGrid();
   }
+
+  // Editor → Library: keep ADD buttons in sync without re-rendering.
+  window.addEventListener(EDITOR_BIN_CHANGED_EVENT, e => {
+    const ids = e?.detail?.ids;
+    if (!Array.isArray(ids)) return;
+
+    addedSampleIds.clear();
+    for (const id of ids) {
+      if (typeof id === "string" && id) addedSampleIds.add(id);
+    }
+
+    applyAddedStateToGrid();
+  });
+
+  // Library: emit "add to editor" intent (metadata only).
+  dom.grid.addEventListener("click", evt => {
+    const target = evt.target;
+    if (!(target instanceof Element)) return;
+
+    const btn = target.closest("button[data-editor-add][data-sample-id]");
+    if (!btn) return;
+
+    const sampleId = btn.getAttribute("data-sample-id") || "";
+    if (!sampleId) return;
+
+    // Duplicate add guard (UI-only): ignore and show "Added".
+    if (addedSampleIds.has(sampleId)) {
+      setAddButtonState(btn, true);
+      return;
+    }
+
+    const sample = sampleById.get(sampleId);
+    if (!sample) return;
+
+    addedSampleIds.add(sampleId);
+    setAddButtonState(btn, true);
+
+    // Emit metadata only (no decode, no load, no preview coupling).
+    window.dispatchEvent(
+      new CustomEvent(LIBRARY_ADD_EVENT, {
+        detail: {
+          id: sample.id,
+          name: sample.name,
+          url: sample.previewUrl,
+          durationSec: Number(sample.durationSec),
+          sampleRate: Number(sample.sampleRate),
+          channels: Number(sample.channels),
+          loudnessText: String(sample.loudness ?? "")
+        }
+      })
+    );
+  });
 
   wireFilters(dom, update);
   update();
