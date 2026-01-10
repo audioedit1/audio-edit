@@ -6,6 +6,12 @@ body {
   margin: 0;
 }
 
+/* Mode hook: set manually for visual inspection.
+   Default is Library Mode. */
+body[data-mode="editor"] {
+  overflow: hidden;
+}
+
 h1 {
   margin: 0;
 }
@@ -34,24 +40,67 @@ h2 {
   opacity: 0.95;
 }
 
-.layout {
+.library-screen {
   margin-top: 10px;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 10px;
 }
 
-.workspace {
+.editor-layer {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: 52px;
+  bottom: 12px;
+  background: #0e0e0e;
+  border: 1px solid #2c84ff;
+  transform: translateY(105%);
+  opacity: 0;
+  pointer-events: none;
   display: grid;
-  grid-template-columns: 1fr minmax(280px, 360px);
+  grid-template-rows: auto 1fr auto;
   gap: 10px;
-  align-items: start;
+  padding: 10px;
+}
+
+body[data-mode="editor"] .editor-layer {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body[data-mode="editor"] .library-screen {
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 10px;
+  min-height: 0;
 }
 
 @media (max-width: 980px) {
-  .workspace {
-    grid-template-columns: 1fr;
+  .editor-layer {
+    left: 8px;
+    right: 8px;
   }
+  .editor-grid {
+    grid-template-columns: 220px 1fr;
+  }
+}
+
+.workbin {
+  min-height: 0;
+}
+
+.editor-hero {
+  min-height: 0;
+}
+
+.editor-ruler {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .panel {
@@ -64,17 +113,8 @@ h2 {
   border-radius: 0;
 }
 
-.hero {
-  background: #0e0e0e;
-  border: 1px solid #2c84ff;
+.sample-library--full {
   border-radius: 6px;
-  padding: 10px;
-}
-
-.utilities {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .controls {
@@ -188,9 +228,11 @@ input[type="file"]:focus-visible,
 }
 
 #waveform {
-  height: 320px;
+  height: 100%;
   background: #111;
-  margin-top: 8px;
+  margin-top: 0;
+  border: 1px solid #ffffff;
+  min-height: 320px;
 }
 
 #region-info {
@@ -200,104 +242,32 @@ input[type="file"]:focus-visible,
 #timeline {
   height: 36px;
   background: #111;
+  border: 1px solid #ffffff;
+  width: min(900px, 100%);
 }
 
 /* =====================
    SESSION (IN-MEMORY FILE LIST)
    ===================== */
 
-.inspector {
-  margin-top: 0;
-  padding: 10px;
-  background: #111;
-  border: 1px solid #ffffff;
-  border-radius: 6px;
-}
-
-.inspector[data-state="inactive"] {
-  border-style: dashed;
-}
-
-.inspector__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.inspector__header h2 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 650;
-}
-
+.inspector,
+.kv,
+.kv__row,
+.kv dt,
+.kv dd,
+.inspector__divider,
+.inspector__placeholder,
+.inspector__placeholder-title,
+.inspector__placeholder-list,
+.inspector__header,
+.inspector__body,
 .inspector__subtitle {
-  margin: 0;
-  opacity: 0.72;
-  font-size: 0.85rem;
+  /* Inspector UI is temporarily hidden in Phase A Library-first skeleton.
+     Keep styles harmless if re-enabled later. */
 }
 
-.inspector__body {
-  margin-top: 10px;
-}
-
-.kv {
-  margin: 0;
-}
-
-.kv__row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 0;
-  border-bottom: 1px dotted #ffffff;
-}
-
-.kv__row:last-child {
-  border-bottom: 0;
-}
-
-.kv dt {
-  margin: 0;
-  opacity: 0.8;
-  font-size: 0.85rem;
-}
-
-.kv dd {
-  margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.85rem;
-}
-
-.inspector__divider {
-  height: 1px;
-  background: #ffffff;
-  opacity: 0.35;
-  margin: 10px 0;
-}
-
-.inspector__placeholder {
-  padding: 8px;
-  background: #0e0e0e;
-  border: 1px solid #ffffff;
-  border-radius: 4px;
-  opacity: 0.75;
-}
-
-.inspector__placeholder-title {
-  margin: 0 0 6px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-
-.inspector__placeholder-list {
-  margin: 0;
-  padding-left: 16px;
+.inspector {
+  display: none;
 }
 
 .session {
@@ -306,6 +276,10 @@ input[type="file"]:focus-visible,
   background: #111;
   border: 1px solid #ffffff;
   border-radius: 6px;
+}
+
+.session--workbin {
+  border-radius: 4px;
 }
 
 .session__header {
@@ -338,6 +312,8 @@ input[type="file"]:focus-visible,
   background: #0e0e0e;
   border: 1px solid #2c84ff;
   border-radius: 6px;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
 }
 
 .session__item {
@@ -530,6 +506,22 @@ input[type="file"]:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Visual-only placeholder: per-card Add-to-Library control.
+   Implemented as a non-interactive UI affordance (no JS, no state). */
+.sample-card__actions::before {
+  content: "+ Add";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ffffff;
+  background: #0e0e0e;
+  opacity: 0.55;
+  font-weight: 700;
+  letter-spacing: 0.2px;
 }
 
 .sample-card {

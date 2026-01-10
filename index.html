@@ -18,9 +18,46 @@
     <h1 class="appbar__title">Audio Edit</h1>
   </header>
 
-  <div class="layout" aria-label="Editor layout">
-    <!-- Transport strip -->
-    <section class="panel panel--transport" aria-label="Transport">
+  <!--
+    UI Modes (visual only)
+    - Default: Library Mode (full-page sample browsing)
+    - Editor Mode: Add `data-mode="editor"` to <body> (no JS)
+  -->
+
+  <div class="library-screen" aria-label="Library mode">
+    <section class="sample-library sample-library--full" aria-labelledby="sampleLibraryTitle">
+      <header class="sample-library__header">
+        <h2 id="sampleLibraryTitle">Sample Library</h2>
+        <p class="sample-library__subtitle">Browse & audition</p>
+      </header>
+
+      <div class="sample-library__toolbar" aria-label="Sample library toolbar">
+        <label class="sample-library__search">
+          Search
+          <input
+            type="search"
+            placeholder="Kick, snare, ambient…"
+            aria-label="Search samples"
+          />
+        </label>
+
+        <div class="sample-library__chips" aria-label="Category filters">
+          <button type="button" class="chip" aria-pressed="false">Drums</button>
+          <button type="button" class="chip" aria-pressed="false">Bass</button>
+          <button type="button" class="chip" aria-pressed="false">Ambient</button>
+          <button type="button" class="chip" aria-pressed="false">FX</button>
+        </div>
+      </div>
+
+      <div class="sample-grid" role="list" aria-label="Sample list">
+        <!-- sample cards rendered by sample-library.js -->
+      </div>
+    </section>
+  </div>
+
+  <!-- Editor layer (secondary). Hidden by default via CSS-only. -->
+  <div class="editor-layer" aria-label="Editor mode">
+    <section class="panel panel--transport" aria-label="Editor header / transport">
       <div class="controls" role="region" aria-label="Transport controls">
         <div class="control-group" aria-label="Transport">
           <span class="control-group__title">Transport</span>
@@ -69,80 +106,24 @@
       </div>
     </section>
 
-    <div class="workspace" aria-label="Workspace">
-      <!-- Editor hero (timeline + waveform) -->
-      <main class="hero" aria-label="Waveform editor">
-        <div id="timeline" role="region" aria-label="Timeline"></div>
-        <div id="waveform" role="region" aria-label="Waveform"></div>
-      </main>
-
-      <!-- Utility panels -->
-      <aside class="utilities" aria-label="Utility panels">
-        <section class="inspector" aria-labelledby="inspectorTitle" data-state="inactive">
-          <header class="inspector__header">
-            <h2 id="inspectorTitle">Inspector</h2>
-            <p class="inspector__subtitle">Analysis (inactive)</p>
-          </header>
-
-          <div class="inspector__body" aria-label="Inspector content">
-            <dl class="kv" aria-label="Sample metadata">
-              <div class="kv__row"><dt>Rate</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>Channels</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>Duration</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>Loudness</dt><dd>—</dd></div>
-              <div class="kv__row"><dt>License</dt><dd>—</dd></div>
-            </dl>
-
-            <div class="inspector__divider" role="separator" aria-hidden="true"></div>
-
-            <div class="inspector__placeholder" aria-label="Analysis placeholders">
-              <p class="inspector__placeholder-title">Analysis</p>
-              <ul class="inspector__placeholder-list" aria-label="Coming later">
-                <li>Peak / RMS (coming later)</li>
-                <li>LUFS (coming later)</li>
-                <li>True Peak (coming later)</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section class="session" aria-labelledby="sessionTitle">
+    <div class="editor-grid" aria-label="Editor workspace">
+      <aside class="workbin" aria-label="Working library">
+        <section class="session session--workbin" aria-labelledby="sessionTitle">
           <header class="session__header">
-            <h2 id="sessionTitle">Session</h2>
-            <p class="session__subtitle">Loaded files</p>
+            <h2 id="sessionTitle">Bin</h2>
+            <p class="session__subtitle">Selected sounds</p>
           </header>
-          <ul id="sessionList" class="session__list" aria-label="Loaded files"></ul>
-        </section>
-
-        <section class="sample-library" aria-labelledby="sampleLibraryTitle">
-          <header class="sample-library__header">
-            <h2 id="sampleLibraryTitle">Sample Library</h2>
-            <p class="sample-library__subtitle">Browse samples</p>
-          </header>
-
-          <div class="sample-library__toolbar" aria-label="Sample library toolbar">
-            <label class="sample-library__search">
-              Search
-              <input
-                type="search"
-                placeholder="Kick, snare, ambient…"
-                aria-label="Search samples"
-              />
-            </label>
-
-            <div class="sample-library__chips" aria-label="Tag filters (static)">
-              <button type="button" class="chip" aria-pressed="false">Drums</button>
-              <button type="button" class="chip" aria-pressed="false">Bass</button>
-              <button type="button" class="chip" aria-pressed="false">Ambient</button>
-              <button type="button" class="chip" aria-pressed="false">FX</button>
-            </div>
-          </div>
-
-          <div class="sample-grid" role="list" aria-label="Sample list">
-            <!-- sample cards unchanged -->
-          </div>
+          <ul id="sessionList" class="session__list" aria-label="Working bin"></ul>
         </section>
       </aside>
+
+      <main class="editor-hero" aria-label="Waveform editor">
+        <div id="waveform" role="region" aria-label="Waveform"></div>
+      </main>
+    </div>
+
+    <div class="editor-ruler" aria-label="Timeline / ruler">
+      <div id="timeline" role="region" aria-label="Timeline"></div>
     </div>
   </div>
 
