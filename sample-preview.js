@@ -1,3 +1,5 @@
+import { decodeToAudioBufferPreservingWavRate } from "./wav-utils.js";
+
 // =====================
 // SAMPLE PREVIEW AUDIO SYSTEM (ISOLATED)
 // =====================
@@ -75,15 +77,13 @@ function resizeCanvasToCssPixels(canvas) {
 
   if (canvas.width !== targetW) canvas.width = targetW;
   if (canvas.height !== targetH) canvas.height = targetH;
-
-  return { dpr };
 }
 
 function drawWaveformLane(canvas, samples) {
   const ctx2d = canvas.getContext("2d");
   if (!ctx2d) return;
 
-  const { dpr } = resizeCanvasToCssPixels(canvas);
+  resizeCanvasToCssPixels(canvas);
   const w = canvas.width;
   const h = canvas.height;
 
@@ -121,8 +121,6 @@ function drawWaveformLane(canvas, samples) {
     ctx2d.fillRect(x, top, 1, Math.max(1, bottom - top));
   }
 
-  // Keep consistent sharpness when dpr > 1.
-  void dpr;
 }
 
 let lastRenderedPreviewBuffer = null;
@@ -235,67 +233,6 @@ function cloneToPreviewContextBuffer(ctx, sourceBuffer) {
   }
 
   return cloned;
-}
-
-function readFourCC(view, offset) {
-  return String.fromCharCode(
-    view.getUint8(offset),
-    view.getUint8(offset + 1),
-    view.getUint8(offset + 2),
-    view.getUint8(offset + 3)
-  );
-}
-
-function getWavSampleRate(arrayBuffer) {
-  try {
-    if (!arrayBuffer || arrayBuffer.byteLength < 12) return null;
-    const view = new DataView(arrayBuffer);
-
-    const riff = readFourCC(view, 0);
-    const wave = readFourCC(view, 8);
-    if (riff !== "RIFF" || wave !== "WAVE") return null;
-
-    let offset = 12;
-    while (offset + 8 <= view.byteLength) {
-      const chunkId = readFourCC(view, offset);
-      const chunkSize = view.getUint32(offset + 4, true);
-      const chunkDataOffset = offset + 8;
-
-      if (chunkId === "fmt ") {
-        if (chunkSize < 16 || chunkDataOffset + 16 > view.byteLength) return null;
-        const sampleRate = view.getUint32(chunkDataOffset + 4, true);
-        return Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : null;
-      }
-
-      const paddedSize = chunkSize + (chunkSize % 2);
-      offset = chunkDataOffset + paddedSize;
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function decodeToAudioBufferPreservingWavRate(arrayBuffer) {
-  const wavSampleRate = getWavSampleRate(arrayBuffer);
-
-  // Create a temporary decoding context with the WAV sample rate when available.
-  // This is isolated and short-lived.
-  const decodingContext = wavSampleRate
-    ? new AudioContext({ sampleRate: wavSampleRate })
-    : new AudioContext();
-
-  try {
-    const copy = arrayBuffer.slice(0);
-    return await decodingContext.decodeAudioData(copy);
-  } finally {
-    try {
-      await decodingContext.close();
-    } catch {
-      // best-effort
-    }
-  }
 }
 
 async function fetchAndDecodeSample(src) {
@@ -736,10 +673,7 @@ function boot() {
   });
 
   window.addEventListener("beforeunload", () => {
-    controllers.forEach(controller => {
-      controller.stop();
-      controller.destroy();
-    });
+    for (const controller of Array.from(controllers)) controller.destroy();
 
     try {
       previewAudioContext?.close();

@@ -38,10 +38,10 @@ function waveformMiniSvg(seedText, bars = 42) {
     const barH = Math.max(2, Math.floor(2 + r * (h - 2)));
     const xPos = i * (barW + gap);
     const yPos = h - barH;
-    rects += `<rect x=\"${xPos}\" y=\"${yPos}\" width=\"${barW}\" height=\"${barH}\" />`;
+    rects += `<rect x="${xPos}" y="${yPos}" width="${barW}" height="${barH}" />`;
   }
 
-  return `<svg viewBox=\"0 0 ${w} ${h}\" aria-hidden=\"true\" focusable=\"false\">${rects}</svg>`;
+  return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false">${rects}</svg>`;
 }
 
 function escapeHtml(value) {
@@ -141,7 +141,7 @@ function renderSamples(gridEl, samples) {
 
         <div class="sample-card__meta">
           ${escapeHtml(metaText)}
-          <label class="sample-card__loop" style="margin-left: 10px; display: inline-flex; gap: 6px; align-items: center;">
+          <label class="sample-card__loop">
             <input type="checkbox" aria-label="Loop preview" data-preview-loop />
             Loop
           </label>
