@@ -25,6 +25,145 @@ let lastArmedPreview = null;
 // Track last captured editor export blob (validation-only, short-lived).
 let lastCapturedExport = null;
 
+// =====================
+// LIBRARY PREVIEW PANEL (UI ONLY)
+// =====================
+// Contract constraints:
+// - No changes to playback logic
+// - No new audio processing beyond reading already-decoded preview buffers
+// - No meters, gain, pan, or metadata panels
+
+const LIBRARY_PREVIEW_LANES_ID = "libraryPreviewLanes";
+
+function getLibraryPreviewLanesEl() {
+  return document.getElementById(LIBRARY_PREVIEW_LANES_ID);
+}
+
+function channelLabel(index, totalChannels) {
+  if (totalChannels === 1) return "";
+  if (totalChannels === 2) return index === 0 ? "L" : "R";
+  return `Ch ${index + 1}`;
+}
+
+function ensureLaneDom(lanesEl, channelIndex, totalChannels) {
+  const lane = document.createElement("div");
+  lane.className = "library-preview__lane";
+
+  const label = document.createElement("div");
+  label.className = "library-preview__label";
+  label.textContent = channelLabel(channelIndex, totalChannels);
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "library-preview__canvas";
+  canvas.dataset.channelIndex = String(channelIndex);
+
+  lane.appendChild(label);
+  lane.appendChild(canvas);
+  lanesEl.appendChild(lane);
+
+  return canvas;
+}
+
+function resizeCanvasToCssPixels(canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const cssW = Math.max(1, Math.floor(rect.width));
+  const cssH = Math.max(1, Math.floor(rect.height));
+  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+  const targetW = cssW * dpr;
+  const targetH = cssH * dpr;
+
+  if (canvas.width !== targetW) canvas.width = targetW;
+  if (canvas.height !== targetH) canvas.height = targetH;
+
+  return { dpr };
+}
+
+function drawWaveformLane(canvas, samples) {
+  const ctx2d = canvas.getContext("2d");
+  if (!ctx2d) return;
+
+  const { dpr } = resizeCanvasToCssPixels(canvas);
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx2d.clearRect(0, 0, w, h);
+
+  // Neutral waveform color.
+  ctx2d.fillStyle = "#7a7a7a";
+
+  const mid = Math.floor(h / 2);
+  const len = samples.length;
+  if (!len) return;
+
+  // One vertical line per pixel column.
+  const step = Math.max(1, Math.floor(len / w));
+
+  for (let x = 0; x < w; x++) {
+    const start = x * step;
+    if (start >= len) break;
+    const end = Math.min(len, start + step);
+
+    let min = 1;
+    let max = -1;
+    for (let i = start; i < end; i++) {
+      const v = samples[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+
+    const y1 = mid - Math.floor(max * (mid - 1));
+    const y2 = mid - Math.floor(min * (mid - 1));
+    const top = Math.min(y1, y2);
+    const bottom = Math.max(y1, y2);
+
+    // 1px wide bar; align to device pixels.
+    ctx2d.fillRect(x, top, 1, Math.max(1, bottom - top));
+  }
+
+  // Keep consistent sharpness when dpr > 1.
+  void dpr;
+}
+
+let lastRenderedPreviewBuffer = null;
+let previewResizeObserver = null;
+
+function renderLibraryPreviewFromBuffer(audioBuffer) {
+  const lanesEl = getLibraryPreviewLanesEl();
+  if (!lanesEl) return;
+  if (!audioBuffer) return;
+
+  lastRenderedPreviewBuffer = audioBuffer;
+
+  // Rebuild lanes to match channel count.
+  lanesEl.textContent = "";
+  const channels = Math.max(1, Number(audioBuffer.numberOfChannels) || 1);
+
+  const canvases = [];
+  for (let ch = 0; ch < channels; ch++) {
+    canvases.push(ensureLaneDom(lanesEl, ch, channels));
+  }
+
+  // Draw all lanes with time-aligned x mapping.
+  for (let ch = 0; ch < channels; ch++) {
+    try {
+      const data = audioBuffer.getChannelData(ch);
+      drawWaveformLane(canvases[ch], data);
+    } catch {
+      // best-effort
+    }
+  }
+
+  // Re-render on resize (UI only).
+  if (!previewResizeObserver) {
+    previewResizeObserver = new ResizeObserver(() => {
+      if (!lastRenderedPreviewBuffer) return;
+      renderLibraryPreviewFromBuffer(lastRenderedPreviewBuffer);
+    });
+    previewResizeObserver.observe(lanesEl);
+  }
+}
+
 function ensurePreviewAudioContext() {
   if (!previewAudioContext || previewAudioContext.state === "closed") {
     previewAudioContext = new AudioContext();
@@ -343,6 +482,9 @@ function wireSampleCard(cardEl) {
     const entry = await fetchAndDecodeSample(src);
     previewBuffer = entry.previewBuffer;
 
+    // UI-only: update the fixed library preview panel when a buffer is available.
+    renderLibraryPreviewFromBuffer(previewBuffer);
+
     if (durationEl) {
       durationEl.textContent = formatMmSs(previewBuffer.duration);
     }
@@ -608,6 +750,14 @@ function boot() {
     decodedCache.clear();
     lastCapturedExport = null;
     lastArmedPreview = null;
+
+    try {
+      previewResizeObserver?.disconnect();
+    } catch {
+      // best-effort
+    }
+    previewResizeObserver = null;
+    lastRenderedPreviewBuffer = null;
   });
 }
 

@@ -273,6 +273,22 @@ input[type="file"]:focus-visible,
   margin-top: 12px;
 }
 
+.sample-library__frame {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sample-library__list {
+  /* List scrolls; preview panel stays stationary below it */
+  height: clamp(260px, 52vh, 520px);
+  overflow: auto;
+  border: 1px solid #1c1c1c;
+  border-radius: 6px;
+  background: #0e0e0e;
+}
+
 .sample-library__search {
   display: flex;
   gap: 8px;
@@ -317,13 +333,13 @@ input[type="file"]:focus-visible,
 }
 
 .sample-grid {
-  margin-top: 12px;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid #1c1c1c;
-  border-radius: 6px;
-  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .sample-card {
@@ -368,9 +384,9 @@ input[type="file"]:focus-visible,
   margin-top: 10px;
   height: 28px;
   padding: 4px 6px;
-  border-radius: 10px;
+  border-radius: 4px;
   background: #111;
-  border: 1px solid #2c84ff;
+  border: 1px solid #2a2a2a;
 }
 
 .sample-card__wave svg {
@@ -380,8 +396,8 @@ input[type="file"]:focus-visible,
 }
 
 .sample-card__wave rect {
-  fill: #2c84ff;
-  opacity: 0.9;
+  fill: #7a7a7a;
+  opacity: 0.85;
 }
 
 .sample-card__wave[data-variant="c"] rect {
@@ -445,6 +461,51 @@ input[type="file"]:focus-visible,
 .sample-card__wave-mini rect {
   fill: #7a7a7a;
   opacity: 0.85;
+}
+
+/* =====================
+   LIBRARY PREVIEW PANEL (FIXED BOTTOM)
+   ===================== */
+
+.library-preview {
+  border-top: 1px solid #1c1c1c;
+  background: #101010;
+  padding: 8px 10px;
+}
+
+.library-preview__lanes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.library-preview__lane {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.library-preview__label {
+  color: #bdbdbd;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.library-preview__canvas {
+  width: 100%;
+  height: 26px;
+  display: block;
+  background: #0e0e0e;
+  border: 1px solid #1c1c1c;
+  border-radius: 4px;
+}
+
+@media (max-width: 520px) {
+  .sample-library__list {
+    height: clamp(220px, 44vh, 420px);
+  }
 }
 
 .sample-card__name {

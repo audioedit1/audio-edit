@@ -82,26 +82,32 @@
       <p class="sample-library__subtitle">Library</p>
     </header>
 
-    <div class="sample-library__toolbar" aria-label="Sample library toolbar">
-      <label class="sample-library__search">
-        Search
-        <input
-          type="search"
-          placeholder="Kick, snare, ambient…"
-          aria-label="Search samples"
-        />
-      </label>
+    <div class="sample-library__frame" aria-label="Library">
+      <div class="sample-library__toolbar" aria-label="Sample library toolbar">
+        <label class="sample-library__search">
+          Search
+          <input
+            type="search"
+            placeholder="Kick, snare, ambient…"
+            aria-label="Search samples"
+          />
+        </label>
 
-      <div class="sample-library__chips" aria-label="Tag filters (static)">
-        <button type="button" class="chip" aria-pressed="false">Drums</button>
-        <button type="button" class="chip" aria-pressed="false">Bass</button>
-        <button type="button" class="chip" aria-pressed="false">Ambient</button>
-        <button type="button" class="chip" aria-pressed="false">FX</button>
+        <div class="sample-library__chips" aria-label="Tag filters (static)">
+          <button type="button" class="chip" aria-pressed="false">Drums</button>
+          <button type="button" class="chip" aria-pressed="false">Bass</button>
+          <button type="button" class="chip" aria-pressed="false">Ambient</button>
+          <button type="button" class="chip" aria-pressed="false">FX</button>
+        </div>
       </div>
-    </div>
 
-    <div class="sample-grid" role="list" aria-label="Sample list">
-      <!-- sample cards unchanged -->
+      <div class="sample-library__list" aria-label="Sample list">
+        <div class="sample-grid" role="list" aria-label="Sample list rows"></div>
+      </div>
+
+      <div id="libraryPreviewPanel" class="library-preview" role="region" aria-label="Library preview">
+        <div id="libraryPreviewLanes" class="library-preview__lanes" aria-label="Waveform lanes"></div>
+      </div>
     </div>
   </section>
 
