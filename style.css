@@ -52,9 +52,9 @@ h2 {
   bottom: 12px;
   background: #0e0e0e;
   border: 1px solid #2c84ff;
-  transform: translateY(105%);
-  opacity: 0;
-  pointer-events: none;
+  transform: translateY(calc(100% - 34px));
+  opacity: 1;
+  pointer-events: auto;
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 10px;
@@ -63,19 +63,17 @@ h2 {
 
 body[data-mode="editor"] .editor-layer {
   transform: translateY(0);
-  opacity: 1;
-  pointer-events: auto;
 }
 
 body[data-mode="editor"] .library-screen {
-  opacity: 0;
+  opacity: 0.25;
   pointer-events: none;
   user-select: none;
 }
 
 .editor-grid {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 240px 1fr 320px;
   gap: 10px;
   min-height: 0;
 }
@@ -94,13 +92,41 @@ body[data-mode="editor"] .library-screen {
   min-height: 0;
 }
 
-.editor-hero {
+.editor-center {
   min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
 }
 
-.editor-ruler {
+.editor-handle {
+  height: 34px;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #111;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  opacity: 0.9;
+}
+
+body[data-mode="editor"] .editor-handle {
+  opacity: 0.75;
+}
+
+.editor-handle__bar {
+  width: 44px;
+  height: 3px;
+  background: #ffffff;
+  opacity: 0.6;
+}
+
+.editor-handle__label {
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  opacity: 0.85;
 }
 
 .panel {
@@ -243,31 +269,109 @@ input[type="file"]:focus-visible,
   height: 36px;
   background: #111;
   border: 1px solid #ffffff;
-  width: min(900px, 100%);
+  width: 100%;
 }
 
 /* =====================
    SESSION (IN-MEMORY FILE LIST)
    ===================== */
 
-.inspector,
-.kv,
-.kv__row,
-.kv dt,
-.kv dd,
-.inspector__divider,
-.inspector__placeholder,
-.inspector__placeholder-title,
-.inspector__placeholder-list,
-.inspector__header,
-.inspector__body,
-.inspector__subtitle {
-  /* Inspector UI is temporarily hidden in Phase A Library-first skeleton.
-     Keep styles harmless if re-enabled later. */
+.inspector {
+  margin-top: 0;
+  padding: 10px;
+  background: #111;
+  border: 1px solid #ffffff;
+  border-radius: 6px;
 }
 
-.inspector {
-  display: none;
+.inspector[data-state="inactive"] {
+  border-style: dashed;
+}
+
+.inspector__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inspector__header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.inspector__subtitle {
+  margin: 0;
+  opacity: 0.72;
+  font-size: 0.85rem;
+}
+
+.inspector__body {
+  margin-top: 10px;
+}
+
+.kv {
+  margin: 0;
+}
+
+.kv__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dotted #ffffff;
+}
+
+.kv__row:last-child {
+  border-bottom: 0;
+}
+
+.kv dt {
+  margin: 0;
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+.kv dd {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+
+.inspector__divider {
+  height: 1px;
+  background: #ffffff;
+  opacity: 0.35;
+  margin: 10px 0;
+}
+
+.inspector__placeholder {
+  padding: 8px;
+  background: #0e0e0e;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  opacity: 0.75;
+}
+
+.inspector__placeholder-title {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.inspector__placeholder-list {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.inspector--editor {
+  display: block;
 }
 
 .session {

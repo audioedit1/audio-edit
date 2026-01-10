@@ -117,13 +117,43 @@
         </section>
       </aside>
 
-      <main class="editor-hero" aria-label="Waveform editor">
+      <main class="editor-center" aria-label="Timeline and waveform">
+        <div id="timeline" role="region" aria-label="Timeline"></div>
         <div id="waveform" role="region" aria-label="Waveform"></div>
       </main>
+
+      <aside class="inspector inspector--editor" aria-labelledby="inspectorTitle" data-state="inactive">
+        <header class="inspector__header">
+          <h2 id="inspectorTitle">Inspector</h2>
+          <p class="inspector__subtitle">Analysis (inactive)</p>
+        </header>
+
+        <div class="inspector__body" aria-label="Inspector content">
+          <dl class="kv" aria-label="Sample metadata">
+            <div class="kv__row"><dt>Rate</dt><dd>—</dd></div>
+            <div class="kv__row"><dt>Channels</dt><dd>—</dd></div>
+            <div class="kv__row"><dt>Duration</dt><dd>—</dd></div>
+            <div class="kv__row"><dt>Loudness</dt><dd>—</dd></div>
+            <div class="kv__row"><dt>License</dt><dd>—</dd></div>
+          </dl>
+
+          <div class="inspector__divider" role="separator" aria-hidden="true"></div>
+
+          <div class="inspector__placeholder" aria-label="Analysis placeholders">
+            <p class="inspector__placeholder-title">Analysis</p>
+            <ul class="inspector__placeholder-list" aria-label="Coming later">
+              <li>Peak / RMS (coming later)</li>
+              <li>LUFS (coming later)</li>
+              <li>True Peak (coming later)</li>
+            </ul>
+          </div>
+        </div>
+      </aside>
     </div>
 
-    <div class="editor-ruler" aria-label="Timeline / ruler">
-      <div id="timeline" role="region" aria-label="Timeline"></div>
+    <div class="editor-handle" aria-hidden="true">
+      <span class="editor-handle__bar"></span>
+      <span class="editor-handle__label">Editor</span>
     </div>
   </div>
 
