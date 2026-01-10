@@ -2,19 +2,84 @@ body {
   font-family: system-ui, sans-serif;
   background: #0e0e0e;
   color: #ffffff;
-  padding: 20px;
+  padding: 12px;
+  margin: 0;
 }
 
 h1 {
-  margin-bottom: 10px;
+  margin: 0;
+}
+
+h2 {
+  margin: 0;
+}
+
+/* =====================
+   APP LAYOUT (DAW-ADJACENT)
+   ===================== */
+
+.appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #111;
+  border: 1px solid #ffffff;
+}
+
+.appbar__title {
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+  opacity: 0.95;
+}
+
+.layout {
+  margin-top: 10px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+}
+
+.panel {
+  background: #111;
+  border: 1px solid #ffffff;
+  border-radius: 6px;
+}
+
+.panel--transport {
+  border-radius: 0;
+}
+
+.hero {
+  background: #0e0e0e;
+  border: 1px solid #2c84ff;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.utilities {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 860px) {
+  .utilities {
+    grid-template-columns: 1fr;
+  }
 }
 
 .controls {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin: 0;
+  padding: 8px 10px;
+  background: #111;
+  border: 1px solid #ffffff;
+  border-radius: 0;
 }
 
 .bitdepth {
@@ -32,11 +97,13 @@ h1 {
 }
 
 button {
-  background: #1e6fd9;
+  background: #2c84ff;
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 10px;
   cursor: pointer;
+  border-radius: 4px;
+  font-weight: 600;
 }
 
 button:hover {
@@ -66,8 +133,8 @@ label {
 }
 
 .hint {
-  opacity: 0.75;
-  font-size: 0.85rem;
+  opacity: 0.72;
+  font-size: 0.8rem;
   white-space: nowrap;
 }
 
@@ -82,9 +149,9 @@ input[type="file"]:focus-visible,
 }
 
 #waveform {
-  height: 140px;
+  height: 320px;
   background: #111;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 #region-info {
@@ -92,7 +159,8 @@ input[type="file"]:focus-visible,
 }
 
 #timeline {
-  height: 30px;
+  height: 36px;
+  background: #111;
 }
 
 /* =====================
@@ -100,11 +168,11 @@ input[type="file"]:focus-visible,
    ===================== */
 
 .session {
-  margin-top: 16px;
-  padding: 14px;
+  margin-top: 0;
+  padding: 10px;
   background: #111;
   border: 1px solid #ffffff;
-  border-radius: 12px;
+  border-radius: 6px;
 }
 
 .session__header {
@@ -117,25 +185,26 @@ input[type="file"]:focus-visible,
 
 .session__header h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 650;
 }
 
 .session__subtitle {
   margin: 0;
-  opacity: 0.75;
-  font-size: 0.95rem;
+  opacity: 0.72;
+  font-size: 0.85rem;
 }
 
 .session__list {
   margin: 12px 0 0;
-  padding: 10px;
+  padding: 8px;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: #0e0e0e;
   border: 1px solid #2c84ff;
-  border-radius: 12px;
+  border-radius: 6px;
 }
 
 .session__item {
@@ -146,11 +215,11 @@ input[type="file"]:focus-visible,
   width: 100%;
   text-align: left;
   background: #111;
-  border: 2px solid #2c84ff;
+  border: 1px solid #2c84ff;
   color: #ffffff;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 4px;
+  font-weight: 650;
   letter-spacing: 0.1px;
 }
 
@@ -164,9 +233,9 @@ input[type="file"]:focus-visible,
 }
 
 .session__button[aria-current="true"] {
-  background: #1e6fd9;
-  border-color: #1e6fd9;
-  font-weight: 800;
+  background: #2c84ff;
+  border-color: #2c84ff;
+  font-weight: 750;
 }
 
 .session__button[aria-current="true"]::before {
@@ -192,7 +261,7 @@ input[type="file"]:focus-visible,
   white-space: nowrap;
   padding: 2px 8px;
   border: 1px solid #ffffff;
-  border-radius: 999px;
+  border-radius: 4px;
   opacity: 0.55;
 }
 
@@ -219,8 +288,8 @@ input[type="file"]:focus-visible,
 
 #exportStatus[data-state="success"] {
   color: #ffffff;
-  border-color: #1e6fd9;
-  background: #1e6fd9;
+  border-color: #2c84ff;
+  background: #2c84ff;
   font-weight: 600;
 }
 
@@ -230,7 +299,7 @@ input[type="file"]:focus-visible,
 
 #exportStatus[data-state="error"] {
   color: #ffffff;
-  border: 2px solid #ffffff;
+  border: 1px solid #ffffff;
   background: #0e0e0e;
   font-weight: 700;
 }
@@ -244,11 +313,11 @@ input[type="file"]:focus-visible,
    ===================== */
 
 .sample-library {
-  margin-top: 16px;
-  padding: 14px;
+  margin-top: 0;
+  padding: 10px;
   background: #111;
   border: 1px solid #ffffff;
-  border-radius: 12px;
+  border-radius: 6px;
 }
 
 .sample-library__header {
@@ -261,22 +330,23 @@ input[type="file"]:focus-visible,
 
 .sample-library__header h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 650;
 }
 
 .sample-library__subtitle {
   margin: 0;
-  opacity: 0.75;
-  font-size: 0.95rem;
+  opacity: 0.72;
+  font-size: 0.85rem;
 }
 
 .sample-library__toolbar {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .sample-library__search {
@@ -291,7 +361,7 @@ input[type="file"]:focus-visible,
   background: #0e0e0e;
   color: #ffffff;
   border: 1px solid #2c84ff;
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 6px 10px;
 }
 
@@ -310,7 +380,7 @@ input[type="file"]:focus-visible,
   color: #ffffff;
   border: 1px solid #2c84ff;
   padding: 5px 10px;
-  border-radius: 999px;
+  border-radius: 4px;
 }
 
 .chip:hover {
@@ -323,22 +393,22 @@ input[type="file"]:focus-visible,
 }
 
 .sample-grid {
-  margin-top: 12px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .sample-card {
   background: #0e0e0e;
   border: 1px solid #2c84ff;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 6px;
+  padding: 10px;
   display: grid;
   grid-template-columns: 1fr auto;
   grid-template-rows: auto auto auto;
   column-gap: 12px;
-  row-gap: 8px;
+  row-gap: 6px;
   align-items: center;
 }
 
@@ -366,10 +436,10 @@ input[type="file"]:focus-visible,
 }
 
 .sample-card__wave {
-  margin-top: 10px;
+  margin-top: 6px;
   height: 28px;
   padding: 4px 6px;
-  border-radius: 10px;
+  border-radius: 4px;
   background: #111;
   border: 1px solid #2c84ff;
 }
@@ -406,7 +476,7 @@ input[type="file"]:focus-visible,
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 4px;
   border: 1px solid #ffffff;
   opacity: 0.85;
   font-size: 0.85rem;
@@ -479,7 +549,7 @@ button[aria-disabled="true"] {
   align-items: center;
   gap: 6px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 4px;
   border: 1px solid #ffffff;
   opacity: 0.75;
   font-size: 0.9rem;
@@ -498,7 +568,7 @@ button[aria-disabled="true"] {
   align-items: center;
   gap: 6px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 4px;
   border: 1px solid #ffffff;
   opacity: 0.75;
   font-size: 0.9rem;
