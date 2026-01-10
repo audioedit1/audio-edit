@@ -48,22 +48,33 @@ h2 {
   position: fixed;
   left: 12px;
   right: 12px;
-  top: auto;
+  top: 52px;
   bottom: 12px;
-  height: calc(100vh - 64px);
-  background: #0e0e0e;
-  border: 1px solid #2c84ff;
-  transform: translateY(calc(100% - 38px));
-  opacity: 1;
-  pointer-events: auto;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 10px;
-  padding: 10px;
+  --editor-handle-h: 38px;
+  z-index: 50;
 }
 
-body[data-mode="editor"] .editor-layer {
+.editor-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--editor-handle-h) + 10px);
+  bottom: 0;
+  background: #0e0e0e;
+  border: 1px solid #2c84ff;
+  padding: 10px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+  transform: translateY(calc(-100% - 12px));
+  transition: transform 220ms ease-out;
+  will-change: transform;
+  pointer-events: none;
+}
+
+body[data-mode="editor"] .editor-panel {
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 body[data-mode="editor"] .library-screen {
@@ -101,16 +112,17 @@ body[data-mode="editor"] .library-screen {
 }
 
 .editor-handle {
-  height: 38px;
+  height: var(--editor-handle-h);
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   background: #111;
-  border: 1px solid #ffffff;
+  border: 1px solid #2c84ff;
   border-radius: 4px;
   opacity: 0.95;
-  cursor: ns-resize;
+  cursor: pointer;
   user-select: none;
   touch-action: manipulation;
 }
@@ -145,13 +157,13 @@ body[data-mode="editor"] .editor-handle {
 }
 
 .editor-handle__chevron::before {
-  content: "▴";
+  content: "▾";
   line-height: 1;
   font-size: 0.85rem;
 }
 
 body[data-mode="editor"] .editor-handle__chevron::before {
-  content: "▾";
+  content: "▴";
 }
 
 .editor-handle:focus-visible {
