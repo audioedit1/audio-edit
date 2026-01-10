@@ -48,11 +48,12 @@ h2 {
   position: fixed;
   left: 12px;
   right: 12px;
-  top: 52px;
+  top: auto;
   bottom: 12px;
+  height: calc(100vh - 64px);
   background: #0e0e0e;
   border: 1px solid #2c84ff;
-  transform: translateY(calc(100% - 34px));
+  transform: translateY(calc(100% - 38px));
   opacity: 1;
   pointer-events: auto;
   display: grid;
@@ -100,7 +101,7 @@ body[data-mode="editor"] .library-screen {
 }
 
 .editor-handle {
-  height: 34px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -108,7 +109,10 @@ body[data-mode="editor"] .library-screen {
   background: #111;
   border: 1px solid #ffffff;
   border-radius: 4px;
-  opacity: 0.9;
+  opacity: 0.95;
+  cursor: ns-resize;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 body[data-mode="editor"] .editor-handle {
@@ -127,6 +131,32 @@ body[data-mode="editor"] .editor-handle {
   font-weight: 650;
   letter-spacing: 0.2px;
   opacity: 0.85;
+}
+
+.editor-handle__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  opacity: 0.7;
+}
+
+.editor-handle__chevron::before {
+  content: "▴";
+  line-height: 1;
+  font-size: 0.85rem;
+}
+
+body[data-mode="editor"] .editor-handle__chevron::before {
+  content: "▾";
+}
+
+.editor-handle:focus-visible {
+  outline: 2px solid #2c84ff;
+  outline-offset: 2px;
 }
 
 .panel {

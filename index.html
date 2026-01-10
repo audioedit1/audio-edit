@@ -57,6 +57,12 @@
 
   <!-- Editor layer (secondary). Hidden by default via CSS-only. -->
   <div class="editor-layer" aria-label="Editor mode">
+    <button type="button" class="editor-handle" aria-label="Editor workspace handle (click/drag to collapse)" title="Editor workspace (visual-only handle)">
+      <span class="editor-handle__bar" aria-hidden="true"></span>
+      <span class="editor-handle__label">Editor Workspace</span>
+      <span class="editor-handle__chevron" aria-hidden="true"></span>
+    </button>
+
     <section class="panel panel--transport" aria-label="Editor header / transport">
       <div class="controls" role="region" aria-label="Transport controls">
         <div class="control-group" aria-label="Transport">
@@ -149,11 +155,6 @@
           </div>
         </div>
       </aside>
-    </div>
-
-    <div class="editor-handle" aria-hidden="true">
-      <span class="editor-handle__bar"></span>
-      <span class="editor-handle__label">Editor</span>
     </div>
   </div>
 
