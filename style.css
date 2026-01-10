@@ -274,19 +274,33 @@ input[type="file"]:focus-visible,
 }
 
 .sample-library__frame {
+  /* Split layout: scrollable list + fixed bottom preview */
   margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  height: clamp(380px, 62vh, 720px);
+  border: 1px solid #1c1c1c;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0e0e0e;
 }
 
 .sample-library__list {
-  /* List scrolls; preview panel stays stationary below it */
-  height: clamp(260px, 52vh, 520px);
+  /* List scrolls inside the fixed-height frame */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
-  border: 1px solid #1c1c1c;
-  border-radius: 6px;
-  background: #0e0e0e;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Toolbar sits above the scrollable list */
+.sample-library__frame > .sample-library__toolbar {
+  margin-top: 0;
+  padding: 10px;
+  background: #111;
+  border-bottom: 1px solid #1c1c1c;
 }
 
 .sample-library__search {
@@ -468,6 +482,8 @@ input[type="file"]:focus-visible,
    ===================== */
 
 .library-preview {
+  flex: 0 0 120px;
+  height: 120px;
   border-top: 1px solid #1c1c1c;
   background: #101010;
   padding: 8px 10px;
@@ -503,8 +519,13 @@ input[type="file"]:focus-visible,
 }
 
 @media (max-width: 520px) {
-  .sample-library__list {
-    height: clamp(220px, 44vh, 420px);
+  .sample-library__frame {
+    height: clamp(340px, 56vh, 640px);
+  }
+
+  .library-preview {
+    flex-basis: 110px;
+    height: 110px;
   }
 }
 
