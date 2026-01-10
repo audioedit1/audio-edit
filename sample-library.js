@@ -3,7 +3,46 @@ const DATA_URL = "data/samples.mock.json";
 // Phase-1 Library → Editor wiring (UI + state only)
 // Contract: no audio decoding, no WaveSurfer calls, no preview changes.
 const LIBRARY_ADD_EVENT = "library:add-to-editor";
-const EDITOR_BIN_CHANGED_EVENT = "editor:bin-changed";
+
+function hashStringToUint32(str) {
+  // Deterministic mini-waveform seed (UI-only).
+  let h = 2166136261;
+  const s = String(str ?? "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function waveformMiniSvg(seedText, bars = 42) {
+  const seed = hashStringToUint32(seedText);
+
+  // Simple xorshift
+  let x = seed || 1;
+  const next = () => {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return (x >>> 0) / 0xffffffff;
+  };
+
+  const w = 110;
+  const h = 18;
+  const gap = 1;
+  const barW = Math.max(1, Math.floor((w - gap * (bars - 1)) / bars));
+
+  let rects = "";
+  for (let i = 0; i < bars; i++) {
+    const r = next();
+    const barH = Math.max(2, Math.floor(2 + r * (h - 2)));
+    const xPos = i * (barW + gap);
+    const yPos = h - barH;
+    rects += `<rect x=\"${xPos}\" y=\"${yPos}\" width=\"${barW}\" height=\"${barH}\" />`;
+  }
+
+  return `<svg viewBox=\"0 0 ${w} ${h}\" aria-hidden=\"true\" focusable=\"false\">${rects}</svg>`;
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -87,31 +126,26 @@ function renderSamples(gridEl, samples) {
     // Metadata-only identity for Phase-1 editor bin.
     card.setAttribute("data-sample-id", sample.id);
 
-    const tagsHtml = sample.tags
-      .map(t => `<span class="tag">${escapeHtml(t)}</span>`)
-      .join("");
-
-    const metaText = `Uploader: ${sample.uploader} • License: ${sample.license} • Duration: ${formatDuration(sample.durationSec)} • ${sample.sampleRate} Hz • ${sample.channels} ch`;
-
-    const isAdded = addedSampleIds.has(sample.id);
-    const addLabel = isAdded ? "Added" : "Add";
-    const addDisabledAttr = isAdded ? "disabled aria-disabled=\"true\"" : "aria-disabled=\"false\"";
+    const metaText = `${formatDuration(sample.durationSec)} • ${sample.sampleRate} Hz • ${sample.channels} ch`;
+    const waveSvg = waveformMiniSvg(sample.id);
 
     card.innerHTML = `
-      <div class="sample-card__top">
-        <h3 class="sample-card__name">${escapeHtml(sample.name)}</h3>
+      <div class="sample-card__wave-mini" aria-hidden="true">
+        ${waveSvg}
       </div>
 
-      <div class="sample-card__tags" aria-label="Tags">
-        ${tagsHtml}
-      </div>
+      <div class="sample-card__main">
+        <div class="sample-card__top">
+          <h3 class="sample-card__name">${escapeHtml(sample.name)}</h3>
+        </div>
 
-      <div class="sample-card__meta">
-        ${escapeHtml(metaText)}
-        <label style="margin-left: 10px; display: inline-flex; gap: 6px; align-items: center;">
-          <input type="checkbox" aria-label="Loop preview" data-preview-loop />
-          Loop
-        </label>
+        <div class="sample-card__meta">
+          ${escapeHtml(metaText)}
+          <label class="sample-card__loop" style="margin-left: 10px; display: inline-flex; gap: 6px; align-items: center;">
+            <input type="checkbox" aria-label="Loop preview" data-preview-loop />
+            Loop
+          </label>
+        </div>
       </div>
 
       <div class="sample-card__actions">
@@ -122,8 +156,8 @@ function renderSamples(gridEl, samples) {
           class="add-btn"
           data-editor-add
           data-sample-id="${escapeHtml(sample.id)}"
-          ${addDisabledAttr}
-        >${addLabel}</button>
+          aria-disabled="false"
+        >Add</button>
       </div>
     `;
 
@@ -211,53 +245,17 @@ const samples = await loadSamples();
 // Fast lookup for ADD wiring.
 const sampleById = new Map(samples.map(s => [s.id, s]));
 
-// Local UI state: which samples are already in the editor bin.
-// (Editor is the source of truth; we also update this on click.)
-const addedSampleIds = new Set();
-
 const dom = getDom();
 
 if (!dom.grid) {
   // Sample Library not present; nothing to do.
 } else {
-  function setAddButtonState(btn, isAdded) {
-    if (!btn) return;
-    btn.disabled = Boolean(isAdded);
-    btn.setAttribute("aria-disabled", isAdded ? "true" : "false");
-    btn.textContent = isAdded ? "Added" : "Add";
-  }
-
-  function applyAddedStateToGrid() {
-    if (!dom.grid) return;
-    const buttons = Array.from(dom.grid.querySelectorAll("button[data-editor-add][data-sample-id]"));
-    for (const btn of buttons) {
-      const id = btn.getAttribute("data-sample-id") || "";
-      setAddButtonState(btn, addedSampleIds.has(id));
-    }
-  }
-
   function update() {
     const selectedCategories = readSelectedCategories(dom.chipEls);
     const searchText = dom.searchInput?.value ?? "";
     const filtered = filterSamplesInOrder(samples, searchText, selectedCategories);
     renderSamples(dom.grid, filtered);
-
-    // Preserve "Added" indicator across filter re-renders.
-    applyAddedStateToGrid();
   }
-
-  // Editor → Library: keep ADD buttons in sync without re-rendering.
-  window.addEventListener(EDITOR_BIN_CHANGED_EVENT, e => {
-    const ids = e?.detail?.ids;
-    if (!Array.isArray(ids)) return;
-
-    addedSampleIds.clear();
-    for (const id of ids) {
-      if (typeof id === "string" && id) addedSampleIds.add(id);
-    }
-
-    applyAddedStateToGrid();
-  });
 
   // Library: emit "add to editor" intent (metadata only).
   dom.grid.addEventListener("click", evt => {
@@ -270,17 +268,8 @@ if (!dom.grid) {
     const sampleId = btn.getAttribute("data-sample-id") || "";
     if (!sampleId) return;
 
-    // Duplicate add guard (UI-only): ignore and show "Added".
-    if (addedSampleIds.has(sampleId)) {
-      setAddButtonState(btn, true);
-      return;
-    }
-
     const sample = sampleById.get(sampleId);
     if (!sample) return;
-
-    addedSampleIds.add(sampleId);
-    setAddButtonState(btn, true);
 
     // Emit metadata only (no decode, no load, no preview coupling).
     window.dispatchEvent(

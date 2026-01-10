@@ -61,24 +61,9 @@
   <!-- Waveform -->
   <div id="waveform" role="region" aria-label="Waveform"></div>
 
-  <!-- Editor (PHASE-1: UI + STATE ONLY) -->
-  <section class="editor" aria-labelledby="editorTitle">
-    <header class="editor__header">
-      <h2 id="editorTitle">Editor</h2>
-      <p class="editor__subtitle">Phase-1: Library → Bin → Inspector (metadata only)</p>
-    </header>
-
-    <div class="editor__slab" role="region" aria-label="Editor panels">
-      <aside class="editor-bin" aria-label="Editor Bin">
-        <h3 class="editor-bin__title">Bin</h3>
-        <ul id="editorBinList" class="editor-bin__list" aria-label="Added samples"></ul>
-      </aside>
-
-      <aside class="editor-inspector" aria-label="Inspector">
-        <h3 class="editor-inspector__title">Inspector</h3>
-        <div id="editorInspector" class="editor-inspector__panel" role="region" aria-label="Selection inspector"></div>
-      </aside>
-    </div>
+  <!-- Editor (Phase-1 placeholder: intentionally empty) -->
+  <section class="editor editor--empty" aria-label="Editor">
+    <div class="editor__empty" aria-hidden="true">Editor (empty)</div>
   </section>
 
   <!-- Session (frontend-only, single-buffer switching) -->
@@ -94,7 +79,7 @@
   <section class="sample-library" aria-labelledby="sampleLibraryTitle">
     <header class="sample-library__header">
       <h2 id="sampleLibraryTitle">Sample Library</h2>
-      <p class="sample-library__subtitle">Phase-1: Preview + ADD to Editor (metadata only)</p>
+      <p class="sample-library__subtitle">Library</p>
     </header>
 
     <div class="sample-library__toolbar" aria-label="Sample library toolbar">

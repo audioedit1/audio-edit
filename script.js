@@ -889,142 +889,21 @@ exportBtn.onclick = runExportWithUI;
 // Equivalence Tests (v1.0), including gapless AudioBufferSourceNode looping.
 
 // =====================
-// PHASE-1: EDITOR BIN + INSPECTOR (UI + STATE ONLY)
+// PHASE-1: EDITOR BIN STATE (INTERNAL ONLY)
 // =====================
 // Contract constraints:
-// - Metadata only (id, name, url, duration, SR, channels, loudness text)
-// - No WaveSurfer interaction
-// - No AudioContext usage
-// - No preview/export coupling
+// - Keep ADD intent wiring
+// - No editor UI semantics (no bin/inspector rendering)
+// - No WaveSurfer interaction, no AudioContext usage
 
 const LIBRARY_ADD_EVENT = "library:add-to-editor";
-const EDITOR_BIN_CHANGED_EVENT = "editor:bin-changed";
-
-const editorBinListEl = document.getElementById("editorBinList");
-const editorInspectorEl = document.getElementById("editorInspector");
 
 const editorState = {
-  bin: [],
-  selectedSampleId: null
+  bin: []
 };
-
-function formatDurationMmSs(seconds) {
-  const total = Math.max(0, Math.floor(Number(seconds) || 0));
-  const mins = Math.floor(total / 60);
-  const secs = total % 60;
-  return `${mins}:${String(secs).padStart(2, "0")}`;
-}
 
 function safeText(value) {
   return value == null ? "" : String(value);
-}
-
-function emitBinChanged() {
-  const ids = editorState.bin.map(s => s.id);
-  window.dispatchEvent(new CustomEvent(EDITOR_BIN_CHANGED_EVENT, { detail: { ids } }));
-}
-
-function renderEditorBin() {
-  if (!editorBinListEl) return;
-
-  editorBinListEl.textContent = "";
-
-  if (!editorState.bin.length) {
-    const li = document.createElement("li");
-    li.className = "editor-bin__empty";
-    li.textContent = "No samples added yet.";
-    editorBinListEl.appendChild(li);
-    return;
-  }
-
-  for (const sample of editorState.bin) {
-    const li = document.createElement("li");
-    li.className = "editor-bin__item";
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "editor-bin__button";
-    btn.dataset.sampleId = safeText(sample.id);
-
-    const isSelected = sample.id === editorState.selectedSampleId;
-    btn.setAttribute("aria-current", isSelected ? "true" : "false");
-
-    const name = document.createElement("span");
-    name.className = "editor-bin__name";
-    name.textContent = safeText(sample.name || sample.id);
-
-    const meta = document.createElement("span");
-    meta.className = "editor-bin__meta";
-
-    const durationText = Number.isFinite(Number(sample.durationSec))
-      ? formatDurationMmSs(sample.durationSec)
-      : "–";
-    const srText = Number.isFinite(Number(sample.sampleRate)) ? `${Number(sample.sampleRate)} Hz` : "–";
-    const chText = Number.isFinite(Number(sample.channels)) ? `${Number(sample.channels)} ch` : "–";
-    const loudText = safeText(sample.loudnessText || "").trim() || "–";
-
-    meta.textContent = `${durationText} • ${srText} • ${chText} • ${loudText}`;
-
-    btn.appendChild(name);
-    btn.appendChild(meta);
-
-    btn.addEventListener("click", () => {
-      editorState.selectedSampleId = sample.id;
-      renderEditorBin();
-      renderEditorInspector();
-    });
-
-    li.appendChild(btn);
-    editorBinListEl.appendChild(li);
-  }
-}
-
-function renderEditorInspector() {
-  if (!editorInspectorEl) return;
-
-  editorInspectorEl.textContent = "";
-
-  const selected = editorState.bin.find(s => s.id === editorState.selectedSampleId) || null;
-  if (!selected) {
-    const empty = document.createElement("div");
-    empty.className = "inspector__empty";
-    empty.textContent = "No selection.";
-    editorInspectorEl.appendChild(empty);
-    return;
-  }
-
-  const title = document.createElement("h4");
-  title.className = "inspector__name";
-  title.textContent = safeText(selected.name || selected.id);
-  editorInspectorEl.appendChild(title);
-
-  const metaList = document.createElement("ul");
-  metaList.className = "inspector__meta";
-
-  const fields = [
-    ["ID", selected.id],
-    ["URL", selected.url],
-    ["Duration", Number.isFinite(Number(selected.durationSec)) ? `${formatDurationMmSs(selected.durationSec)}` : "–"],
-    ["Sample Rate", Number.isFinite(Number(selected.sampleRate)) ? `${Number(selected.sampleRate)} Hz` : "–"],
-    ["Channels", Number.isFinite(Number(selected.channels)) ? `${Number(selected.channels)}` : "–"],
-    ["Loudness", safeText(selected.loudnessText || "").trim() || "–"]
-  ];
-
-  for (const [label, value] of fields) {
-    const li = document.createElement("li");
-    li.textContent = `${label}: ${safeText(value)}`;
-    metaList.appendChild(li);
-  }
-
-  editorInspectorEl.appendChild(metaList);
-
-  const placeholders = document.createElement("div");
-  placeholders.className = "inspector__placeholder";
-  placeholders.innerHTML = `
-    <div><strong>Gain</strong> (coming soon)</div>
-    <div><strong>Meter</strong> (coming soon)</div>
-  `;
-  editorInspectorEl.appendChild(placeholders);
 }
 
 function addSampleToEditorBin(sampleMeta) {
@@ -1035,15 +914,11 @@ function addSampleToEditorBin(sampleMeta) {
 
   const existing = editorState.bin.find(s => s.id === id) || null;
   if (existing) {
-    // Duplicate add: ignore, but select the existing item for clear UI feedback.
-    editorState.selectedSampleId = existing.id;
-    renderEditorBin();
-    renderEditorInspector();
-    emitBinChanged();
+    // Duplicate add: ignore (no UI feedback in Phase-1).
     return;
   }
 
-  const entry = {
+  editorState.bin.push({
     id,
     name: safeText(sampleMeta.name).trim(),
     url: safeText(sampleMeta.url).trim(),
@@ -1051,20 +926,9 @@ function addSampleToEditorBin(sampleMeta) {
     sampleRate: Number(sampleMeta.sampleRate),
     channels: Number(sampleMeta.channels),
     loudnessText: safeText(sampleMeta.loudnessText)
-  };
-
-  editorState.bin.push(entry);
-  editorState.selectedSampleId = entry.id;
-
-  renderEditorBin();
-  renderEditorInspector();
-  emitBinChanged();
+  });
 }
 
 window.addEventListener(LIBRARY_ADD_EVENT, e => {
   addSampleToEditorBin(e?.detail);
 });
-
-// Initial render.
-renderEditorBin();
-renderEditorInspector();
